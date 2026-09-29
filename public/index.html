@@ -5,83 +5,287 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Suomirap Radio</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
   body {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: system-ui, -apple-system, sans-serif;
-    background: linear-gradient(160deg, #0f0c29, #302b63, #24243e);
+    background: #0a0818;
     color: #fff;
+    overflow: hidden;
+    position: relative;
   }
+
+  /* Ambient background blobs */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.35;
+    z-index: 0;
+  }
+  .blob-1 { width: 420px; height: 420px; background: #7b2ff7; top: -120px; left: -100px; animation: drift 18s ease-in-out infinite; }
+  .blob-2 { width: 360px; height: 360px; background: #f72585; bottom: -100px; right: -80px; animation: drift 22s ease-in-out infinite reverse; }
+  .blob-3 { width: 300px; height: 300px; background: #4361ee; top: 40%; left: 55%; animation: drift 26s ease-in-out infinite; }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(60px, 40px) scale(1.15); }
+    66% { transform: translate(-40px, 60px) scale(0.9); }
+  }
+
   .card {
-    width: min(420px, 90vw);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 20px;
-    padding: 40px 32px;
-    text-align: center;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    position: relative;
+    z-index: 1;
+    width: min(420px, 92vw);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 28px;
+    padding: 36px 32px 28px;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
   }
-  .logo {
-    font-size: 56px;
-    margin-bottom: 8px;
-    animation: pulse 2s infinite;
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
+  .live-badge {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(255, 59, 92, 0.14);
+    border: 1px solid rgba(255, 59, 92, 0.35);
+    color: #ff6b81;
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    padding: 6px 12px; border-radius: 999px;
   }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.08); }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff3b5c; animation: blink 1.4s infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .bitrate { color: rgba(255, 255, 255, 0.35); font-size: 11px; letter-spacing: 1px; }
+
+  /* Artwork */
+  .artwork {
+    width: 150px; height: 150px; margin: 0 auto 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7b2ff7, #f72585);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px;
+    box-shadow: 0 12px 40px rgba(123, 47, 247, 0.45);
+    position: relative;
+    transition: transform 0.4s ease;
   }
-  h1 { font-size: 28px; margin-bottom: 4px; letter-spacing: 1px; }
-  .sub { color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 28px; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff3b5c; margin-right: 6px; animation: blink 1.4s infinite; }
-  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-  audio { width: 100%; margin-bottom: 20px; }
-  .status { font-size: 13px; color: rgba(255, 255, 255, 0.55); min-height: 18px; }
-  .status.error { color: #ff6b81; }
-  a.github {
-    display: inline-block;
-    margin-top: 24px;
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 12px;
-    text-decoration: none;
+  .playing .artwork { animation: spin 12s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .artwork::after {
+    content: '';
+    position: absolute;
+    width: 26px; height: 26px;
+    background: #0a0818;
+    border-radius: 50%;
   }
-  a.github:hover { color: rgba(255, 255, 255, 0.7); }
+
+  /* Title */
+  .meta { text-align: center; margin-bottom: 24px; }
+  .meta h1 { font-size: 26px; font-weight: 800; letter-spacing: 0.5px; }
+  .meta .sub { color: rgba(255, 255, 255, 0.5); font-size: 13px; margin-top: 4px; min-height: 17px; }
+
+  /* Equalizer */
+  .eq {
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: 4px; height: 30px; margin-bottom: 22px;
+  }
+  .eq span {
+    width: 5px; border-radius: 3px;
+    background: linear-gradient(to top, #7b2ff7, #f72585);
+    height: 4px;
+  }
+  .playing .eq span { animation: bounce 1s ease-in-out infinite; }
+  .eq span:nth-child(1) { animation-delay: 0s; }
+  .eq span:nth-child(2) { animation-delay: 0.15s; }
+  .eq span:nth-child(3) { animation-delay: 0.3s; }
+  .eq span:nth-child(4) { animation-delay: 0.45s; }
+  .eq span:nth-child(5) { animation-delay: 0.6s; }
+  .eq span:nth-child(6) { animation-delay: 0.35s; }
+  .eq span:nth-child(7) { animation-delay: 0.1s; }
+  @keyframes bounce {
+    0%, 100% { height: 5px; }
+    50% { height: 28px; }
+  }
+
+  /* Play button */
+  .play-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 78px; height: 78px;
+    margin: 0 auto 26px;
+    border: none; border-radius: 50%;
+    background: linear-gradient(135deg, #7b2ff7, #f72585);
+    color: #fff; font-size: 30px;
+    cursor: pointer;
+    box-shadow: 0 10px 35px rgba(247, 37, 133, 0.5);
+    transition: transform 0.15s ease, box-shadow 0.3s ease;
+  }
+  .play-btn:hover { transform: scale(1.06); box-shadow: 0 14px 45px rgba(247, 37, 133, 0.65); }
+  .play-btn:active { transform: scale(0.96); }
+
+  /* Volume row */
+  .volume-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 22px;
+  }
+  .mute-btn {
+    background: none; border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 20px; cursor: pointer;
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    transition: color 0.2s;
+  }
+  .mute-btn:hover { color: #fff; }
+  .volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, #f72585 var(--vol, 80%), rgba(255,255,255,0.15) var(--vol, 80%));
+    outline: none;
+    cursor: pointer;
+  }
+  .volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .volume-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  .volume-slider::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+  }
+  .vol-value { color: rgba(255,255,255,0.5); font-size: 12px; width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .footer {
+    display: flex; justify-content: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 16px;
+  }
+  .footer a { color: rgba(255,255,255,0.3); font-size: 11px; text-decoration: none; letter-spacing: 0.5px; }
+  .footer a:hover { color: rgba(255,255,255,0.6); }
+
+  .hidden { display: none; }
 </style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo" id="logo">📻</div>
-    <h1>Suomirap</h1>
-    <div class="sub"><span class="dot"></span>SUORA LÄHETYS</div>
-    <audio id="player" controls preload="none" src="/api/suomirap"></audio>
-    <div class="status" id="status"></div>
-    <a class="github" href="https://github.com/ZoniBoy00/suomirap-redirect" target="_blank" rel="noopener">GitHub · ZoniBoy00/suomirap-redirect</a>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <div class="card" id="card">
+    <div class="header">
+      <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+      <div class="bitrate">64 kbps · AAC</div>
+    </div>
+
+    <div class="artwork">🎤</div>
+
+    <div class="meta">
+      <h1>Suomirap</h1>
+      <div class="sub" id="status">Valmiina toistoon</div>
+    </div>
+
+    <div class="eq" id="eq">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+
+    <button class="play-btn" id="playBtn" aria-label="Toista">▶</button>
+
+    <div class="volume-row">
+      <button class="mute-btn" id="muteBtn" aria-label="Hiljennä">🔊</button>
+      <input type="range" class="volume-slider" id="volume" min="0" max="100" value="80">
+      <span class="vol-value" id="volValue">80%</span>
+    </div>
+
+    <div class="footer">
+      <a href="https://github.com/ZoniBoy00/suomirap-redirect" target="_blank" rel="noopener">GITHUB · ZONIBOY00/SUOMIRAP-REDIRECT</a>
+    </div>
   </div>
+
+  <audio id="player" preload="none" src="/api/suomirap"></audio>
+
 <script>
   const player = document.getElementById('player');
+  const card = document.getElementById('card');
+  const playBtn = document.getElementById('playBtn');
   const status = document.getElementById('status');
-  const logo = document.getElementById('logo');
+  const volume = document.getElementById('volume');
+  const volValue = document.getElementById('volValue');
+  const muteBtn = document.getElementById('muteBtn');
+
+  let lastVolume = 0.8;
+  player.volume = 0.8;
+  updateVolumeUI();
+
+  function updateVolumeUI() {
+    const pct = Math.round(player.volume * 100);
+    volValue.textContent = pct + '%';
+    volume.value = pct;
+    volume.style.setProperty('--vol', pct + '%');
+    muteBtn.textContent = player.muted || player.volume === 0 ? '🔇'
+      : player.volume < 0.5 ? '🔉' : '🔊';
+  }
+
+  function setPlaying(on) {
+    card.classList.toggle('playing', on);
+    playBtn.textContent = on ? '⏸' : '▶';
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (player.paused) {
+      status.textContent = 'Yhdistetään...';
+      // Always fetch with fresh skey — reset the source
+      player.src = '/api/suomirap?t=' + Date.now();
+      player.play().catch(() => {
+        status.textContent = 'Yhdistäminen epäonnistui';
+      });
+    } else {
+      player.pause();
+      player.src = '';
+      setPlaying(false);
+      status.textContent = 'Pysäytetty';
+    }
+  });
 
   player.addEventListener('playing', () => {
-    logo.textContent = '🎵';
-    status.textContent = 'Radio soi';
-    status.classList.remove('error');
+    setPlaying(true);
+    status.textContent = 'Suora lähetys käynnissä';
   });
-  player.addEventListener('waiting', () => { status.textContent = 'Yhdistetään...'; });
+  player.addEventListener('waiting', () => { status.textContent = 'Puskuroi...'; });
   player.addEventListener('error', () => {
-    logo.textContent = '📡';
-    status.textContent = 'Yhteys katkesi — yritä uudelleen';
-    status.classList.add('error');
+    setPlaying(false);
+    status.textContent = 'Yhteys katkesi — paina play uudelleen';
   });
-  // If the stream stalls, reload the source (gets a fresh skey from the redirect)
-  player.addEventListener('stalled', () => {
-    const t = player.currentTime;
-    player.load();
-    player.currentTime = t;
-    player.play().catch(() => {});
+
+  volume.addEventListener('input', () => {
+    player.volume = volume.value / 100;
+    player.muted = false;
+    if (player.volume > 0) lastVolume = player.volume;
+    updateVolumeUI();
+  });
+
+  muteBtn.addEventListener('click', () => {
+    player.muted = !player.muted;
+    if (!player.muted && player.volume === 0) {
+      player.volume = lastVolume || 0.8;
+    }
+    updateVolumeUI();
   });
 </script>
 </body>
