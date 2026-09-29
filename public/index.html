@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suomirap Radio</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: linear-gradient(160deg, #0f0c29, #302b63, #24243e);
+    color: #fff;
+  }
+  .card {
+    width: min(420px, 90vw);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    padding: 40px 32px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  }
+  .logo {
+    font-size: 56px;
+    margin-bottom: 8px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  h1 { font-size: 28px; margin-bottom: 4px; letter-spacing: 1px; }
+  .sub { color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 28px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff3b5c; margin-right: 6px; animation: blink 1.4s infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  audio { width: 100%; margin-bottom: 20px; }
+  .status { font-size: 13px; color: rgba(255, 255, 255, 0.55); min-height: 18px; }
+  .status.error { color: #ff6b81; }
+  a.github {
+    display: inline-block;
+    margin-top: 24px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    text-decoration: none;
+  }
+  a.github:hover { color: rgba(255, 255, 255, 0.7); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo" id="logo">📻</div>
+    <h1>Suomirap</h1>
+    <div class="sub"><span class="dot"></span>SUORA LÄHETYS</div>
+    <audio id="player" controls preload="none" src="/api/suomirap"></audio>
+    <div class="status" id="status"></div>
+    <a class="github" href="https://github.com/ZoniBoy00/suomirap-redirect" target="_blank" rel="noopener">GitHub · ZoniBoy00/suomirap-redirect</a>
+  </div>
+<script>
+  const player = document.getElementById('player');
+  const status = document.getElementById('status');
+  const logo = document.getElementById('logo');
+
+  player.addEventListener('playing', () => {
+    logo.textContent = '🎵';
+    status.textContent = 'Radio soi';
+    status.classList.remove('error');
+  });
+  player.addEventListener('waiting', () => { status.textContent = 'Yhdistetään...'; });
+  player.addEventListener('error', () => {
+    logo.textContent = '📡';
+    status.textContent = 'Yhteys katkesi — yritä uudelleen';
+    status.classList.add('error');
+  });
+  // If the stream stalls, reload the source (gets a fresh skey from the redirect)
+  player.addEventListener('stalled', () => {
+    const t = player.currentTime;
+    player.load();
+    player.currentTime = t;
+    player.play().catch(() => {});
+  });
+</script>
+</body>
+</html>
