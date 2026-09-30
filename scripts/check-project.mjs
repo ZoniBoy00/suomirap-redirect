@@ -57,7 +57,7 @@ assert.ok(
 );
 
 const icecastSource = await read(
-  "vendor/icecast-metadata-player-1.17.13/src/IcecastMetadataPlayer.js",
+  "public/vendor/icecast-metadata-player-1.17.13/src/IcecastMetadataPlayer.js",
 );
 assert.ok(
   icecastSource.includes("createConstantSource"),
@@ -141,7 +141,7 @@ for (const path of [
   "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.flac.min.js",
   "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.opus.min.js",
   "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.vorbis.min.js",
-  "vendor/icecast-metadata-player-1.17.13/LICENSE",
+  "public/vendor/icecast-metadata-player-1.17.13/LICENSE",
   "public/favicon.svg",
   "public/cover-fallback.svg",
   "public/og-image.png",

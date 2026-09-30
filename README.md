@@ -41,6 +41,21 @@ There are two separate hosts:
 
 The now-playing endpoint uses a short shared cache and serves best-effort stale data during upstream errors when a warm function instance has a previous successful result. The serverless instance cache is not durable storage.
 
+#### Using the public now-playing API
+
+Call `GET https://suomirap-redirect.vercel.app/api/nowplaying`. It needs no API key and allows cross-origin browser requests. The JSON includes fields such as `track`, `artist`, `image`, `appleMusic`, `trackStartedAt`, `trackDuration`, `show`, `source`, and `stale`.
+
+```js
+const response = await fetch(
+  "https://suomirap-redirect.vercel.app/api/nowplaying",
+);
+if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+const nowPlaying = await response.json();
+console.log(nowPlaying.track, nowPlaying.artist, nowPlaying.image);
+```
+
+`/api/health` is a liveness check, and `/api/suomirap` is a legacy 307 stream redirect—not a JSON metadata endpoint. These `/api/*` routes are on the Vercel hostname, not the IP-and-port audio proxy.
+
 ### Audio proxy (VPS)
 
 - `https://5.61.90.42:8443/health` — proxy liveness check.
@@ -61,7 +76,7 @@ npm test
 
 `npm run check` validates the static HTML shell, player JavaScript and utilities, configured security headers and required assets, runs syntax checks, and checks Prettier formatting. `npm test` runs the built-in Node test runner against API fixtures, endpoint behavior, ICY title parsing and matching, track timing, and history pagination.
 
-The browser player uses a locally patched `icecast-metadata-player` 1.17.13 distribution to parse ICY metadata on the audio stream. Its AudioContext keep-alive uses a silent `ConstantSourceNode` (with an oscillator fallback) instead of the deprecated `ScriptProcessorNode`. The LGPL-3.0-or-later license and complete patched source are included under `vendor/icecast-metadata-player-1.17.13/`; the rebuilt browser assets are under `public/vendor/icecast-metadata-player-1.17.13/`.
+The browser player uses a locally patched `icecast-metadata-player` 1.17.13 distribution to parse ICY metadata on the audio stream. Its AudioContext keep-alive uses a silent `ConstantSourceNode` (with an oscillator fallback) instead of the deprecated `ScriptProcessorNode`. The LGPL-3.0-or-later license, complete patched source, and browser assets are kept together under `public/vendor/icecast-metadata-player-1.17.13/`.
 
 GitHub Actions runs the checks on pushes to `master` and pull requests. A scheduled monitor checks the deployed `/api/health` and `/api/nowplaying` endpoints every 15 minutes, opens one issue when a check fails, and closes it after recovery. It uses GitHub's own issue/API logs; no third-party telemetry service is installed.
 
