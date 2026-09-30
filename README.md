@@ -47,7 +47,7 @@ npm test
 
 `npm run check` validates the static HTML shell, player JavaScript and utilities, configured security headers and required assets, runs syntax checks, and checks Prettier formatting. `npm test` runs the built-in Node test runner against API fixtures, endpoint behavior, ICY title parsing and matching, track timing, and history pagination.
 
-The browser player uses the unmodified `icecast-metadata-player` 1.17.13 distribution to parse ICY metadata on the audio stream. Its LGPL-3.0-or-later license and source are included under `vendor/icecast-metadata-player-1.17.13/`; the local browser build is under `public/vendor/icecast-metadata-player-1.17.13/`.
+The browser player uses a locally patched `icecast-metadata-player` 1.17.13 distribution to parse ICY metadata on the audio stream. Its iOS AudioContext keep-alive uses a silent `ConstantSourceNode` (with an oscillator fallback) instead of the deprecated `ScriptProcessorNode`. The LGPL-3.0-or-later license and complete patched source are included under `vendor/icecast-metadata-player-1.17.13/`; the rebuilt browser assets are under `public/vendor/icecast-metadata-player-1.17.13/`.
 
 GitHub Actions runs the checks on pushes to `master` and pull requests. A scheduled monitor checks the deployed `/api/health` and `/api/nowplaying` endpoints every 15 minutes, opens one issue when a check fails, and closes it after recovery. It uses GitHub's own issue/API logs; no third-party telemetry service is installed.
 

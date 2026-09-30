@@ -55,6 +55,28 @@ assert.ok(
   playerJs.includes("https://5.61.90.42:8443/stream"),
   "the player must use the HTTPS ICY proxy",
 );
+
+const icecastSource = await read(
+  "vendor/icecast-metadata-player-1.17.13/src/IcecastMetadataPlayer.js",
+);
+assert.ok(
+  icecastSource.includes("createConstantSource"),
+  "the keep-alive workaround must use a modern silent audio source",
+);
+assert.doesNotMatch(
+  icecastSource,
+  /createScriptProcessor/,
+  "the vendored keep-alive code must avoid the deprecated processor",
+);
+const icecastBundle = await read(
+  "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.main.min.js",
+);
+assert.doesNotMatch(
+  icecastBundle,
+  /createScriptProcessor/,
+  "the browser bundle must not construct a deprecated processor",
+);
+
 assert.ok(
   !playerJs.includes("attemptAutoplay"),
   "the player must wait for an explicit user action before connecting",

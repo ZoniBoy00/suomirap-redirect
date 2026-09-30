@@ -632,10 +632,15 @@ if (AudioContext && !IcecastMetadataPlayer.constructor[audioContext]) {
     audioCtx
       .resume()
       .then(() => {
-        // hack for iOS to continue playing while locked
-        audioCtx
-          .createScriptProcessor(2 ** 14, 2, 2)
-          .connect(audioCtx.destination);
+        // Keep iOS audio active in the background without deprecated processing.
+        const keepAliveSource = audioCtx.createConstantSource
+          ? audioCtx.createConstantSource()
+          : audioCtx.createOscillator();
+        const keepAliveGain = audioCtx.createGain();
+        keepAliveGain.gain.value = 0;
+        keepAliveSource.connect(keepAliveGain);
+        keepAliveGain.connect(audioCtx.destination);
+        keepAliveSource.start();
 
         audioCtx.onstatechange = () => {
           if (audioCtx.state !== "running")
