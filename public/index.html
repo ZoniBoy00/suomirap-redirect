@@ -460,16 +460,15 @@
   function setPlaying(on) {
     playing = on;
     card.classList.toggle('playing', on);
-    if (on) startDrawLoop(); else stopDrawLoop();
+    if (on) startDrawLoop(); else if (!autoRetry) stopDrawLoop();
   }
 
   playBtn.addEventListener('click', () => {
     if (player.paused) {
-      initAudioGraph();
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-      player.src = '/api/suomirap?t=' + Date.now();
-      player.play().catch(() => setPlaying(false));
+      connectStream();
     } else {
+      userPaused = true;
+      autoRetry = false;
       player.pause();
       player.removeAttribute('src');
       player.load();
@@ -477,11 +476,97 @@
     }
   });
 
-  player.addEventListener('playing', () => setPlaying(true));
-  player.addEventListener('error', () => setPlaying(false));
-
-  // ---------------------------------------------------------------- Audio graph
   let audioCtx = null, analyser = null, freqData = null, mediaSrcFailed = false;
+
+  function connectStream() {
+    userPaused = false;
+    initAudioGraph();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    player.src = '/api/suomirap?t=' + Date.now(); // fresh redirect every start
+    return player.play();
+  }
+
+  player.addEventListener('playing', () => setPlaying(true));
+  player.addEventListener('error', () => {
+    setPlaying(false);
+    scheduleReconnect();
+  });
+
+  /* ---------- 24/7 autoplay + auto-reconnect ---------- */
+  let userPaused = false;   // user pressed pause -> don't fight them
+  let autoRetry = false;    // reconnect loop active
+  let retryDelay = 1000;
+
+  function scheduleReconnect() {
+    if (userPaused || autoRetry) return;
+    autoRetry = true;
+    retryDelay = 1000;
+    reconnectLoop();
+  }
+
+  function reconnectLoop() {
+    if (userPaused) { autoRetry = false; return; }
+    connectStream().then(() => {
+      autoRetry = false;
+    }).catch(() => {
+      // Autoplay blocked or network down -> backoff and try again
+      retryDelay = Math.min(retryDelay * 2, 10000);
+      setTimeout(reconnectLoop, retryDelay);
+    });
+  }
+
+  // Watchdog: if the audio freezes (stall without error), force reconnect
+  let lastTime = 0;
+  setInterval(() => {
+    if (!playing || userPaused) return;
+    if (player.currentTime === lastTime) {
+      player.src = '/api/suomirap?t=' + Date.now();
+      player.play().catch(() => {});
+    }
+    lastTime = player.currentTime;
+  }, 5000);
+
+  // Autoplay on page load: try with sound first. If the browser blocks it,
+  // start muted (always allowed) and unmute on the first user interaction.
+  function attemptAutoplay() {
+    connectStream().then(() => {
+      // Full sound autoplay allowed (e.g. installed PWA / high engagement)
+    }).catch(() => {
+      player.muted = true;
+      player.src = '/api/suomirap?t=' + Date.now();
+      player.play().then(() => {
+        showUnmuteBanner();
+      }).catch(() => {
+        // Even muted autoplay blocked -> fall back to reconnect loop
+        scheduleReconnect();
+      });
+    });
+  }
+
+  function showUnmuteBanner() {
+    if (document.getElementById('tapBanner')) return;
+    const b = document.createElement('div');
+    b.id = 'tapBanner';
+    b.textContent = 'Selain esti äänen — napauta missä vain kuunteleksesi';
+    b.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);' +
+      'background:rgba(20,16,40,.9);border:1px solid rgba(255,255,255,.18);color:#fff;' +
+      'font:600 13px system-ui;padding:12px 20px;border-radius:999px;z-index:99;' +
+      'backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.5);white-space:nowrap;';
+    document.body.appendChild(b);
+    const unmute = () => {
+      player.muted = false;
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      b.remove();
+      document.removeEventListener('click', unmute);
+      document.removeEventListener('keydown', unmute);
+      document.removeEventListener('touchstart', unmute);
+    };
+    document.addEventListener('click', unmute);
+    document.addEventListener('keydown', unmute);
+    document.addEventListener('touchstart', unmute);
+  }
+
+  attemptAutoplay();
 
   function initAudioGraph() {
     if (audioCtx || mediaSrcFailed) return;
