@@ -82,7 +82,9 @@ assert.ok(
   "CSP must allow the ICY proxy fetch",
 );
 assert.ok(
-  contentSecurityPolicy?.includes("media-src 'self' https://5.61.90.42:8443"),
+  contentSecurityPolicy?.includes(
+    "media-src 'self' data: https://5.61.90.42:8443",
+  ),
   "CSP must allow proxy audio media",
 );
 
