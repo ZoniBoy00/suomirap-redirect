@@ -23,7 +23,7 @@ https://github.com/eshaz/icecast-metadata-js
 * **Vorbis** `application/ogg`, `audio/webm`
 
 ## Supported Browsers:
- * **All major browsers** (Chrome, Firefox, Opera, Android, iOS 12.4 and higher, Safari Desktop)
+ * Browser support depends on available codecs and Web Audio APIs.
  * [**Check your Browser Here**](https://eshaz.github.io/icecast-metadata-js/demo.html#supported-codecs)
 
 ---

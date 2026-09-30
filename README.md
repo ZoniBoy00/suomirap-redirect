@@ -47,7 +47,7 @@ npm test
 
 `npm run check` validates the static HTML shell, player JavaScript and utilities, configured security headers and required assets, runs syntax checks, and checks Prettier formatting. `npm test` runs the built-in Node test runner against API fixtures, endpoint behavior, ICY title parsing and matching, track timing, and history pagination.
 
-The browser player uses a locally patched `icecast-metadata-player` 1.17.13 distribution to parse ICY metadata on the audio stream. Its iOS AudioContext keep-alive uses a silent `ConstantSourceNode` (with an oscillator fallback) instead of the deprecated `ScriptProcessorNode`. The LGPL-3.0-or-later license and complete patched source are included under `vendor/icecast-metadata-player-1.17.13/`; the rebuilt browser assets are under `public/vendor/icecast-metadata-player-1.17.13/`.
+The browser player uses a locally patched `icecast-metadata-player` 1.17.13 distribution to parse ICY metadata on the audio stream. Its AudioContext keep-alive uses a silent `ConstantSourceNode` (with an oscillator fallback) instead of the deprecated `ScriptProcessorNode`. The LGPL-3.0-or-later license and complete patched source are included under `vendor/icecast-metadata-player-1.17.13/`; the rebuilt browser assets are under `public/vendor/icecast-metadata-player-1.17.13/`.
 
 GitHub Actions runs the checks on pushes to `master` and pull requests. A scheduled monitor checks the deployed `/api/health` and `/api/nowplaying` endpoints every 15 minutes, opens one issue when a check fails, and closes it after recovery. It uses GitHub's own issue/API logs; no third-party telemetry service is installed.
 
@@ -65,8 +65,6 @@ The project can be imported into Vercel with the Git repository. If Git-based de
 
 - The functions use Vercel's Node request/response handler contract; the redirect has not been moved to Edge Runtime. Do not assume an Edge conversion is faster or cheaper without profiling and adapting the handler contract.
 - There is no blanket rate limit on the public stream URL; a per-IP limit could interrupt directory listings and listeners, and this project has no shared rate-limit store. Monitor Vercel function usage before adding one.
-- iOS volume uses a Web Audio `GainNode`. Desktop Chromium playback and UI were browser-tested; playback, AirPlay, and background audio still need testing on a physical iPhone/Safari device.
-- AirPlay is exposed only when the browser offers its native target-picker API. Chromecast is not included.
 
 ## License
 
