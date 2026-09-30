@@ -4,6 +4,12 @@ import { Script } from "node:vm";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const html = await read("public/index.html");
+const readme = await read("README.md");
+assert.match(
+  readme,
+  /\[API and stream integration guide\]\(API\.md\)/,
+  "README must link to the API usage guide",
+);
 assert.equal(
   html.charCodeAt(0),
   "<".charCodeAt(0),
@@ -130,6 +136,7 @@ assert.ok(
 );
 
 for (const path of [
+  "API.md",
   "public/styles.css",
   "public/player.js",
   "public/player-utils.js",

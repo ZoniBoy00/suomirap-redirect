@@ -41,20 +41,9 @@ There are two separate hosts:
 
 The now-playing endpoint uses a short shared cache and serves best-effort stale data during upstream errors when a warm function instance has a previous successful result. The serverless instance cache is not durable storage.
 
-#### Using the public now-playing API
+#### Full API reference
 
-Call `GET https://suomirap-redirect.vercel.app/api/nowplaying`. It needs no API key and allows cross-origin browser requests. The JSON includes fields such as `track`, `artist`, `image`, `appleMusic`, `trackStartedAt`, `trackDuration`, `show`, `source`, and `stale`.
-
-```js
-const response = await fetch(
-  "https://suomirap-redirect.vercel.app/api/nowplaying",
-);
-if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-const nowPlaying = await response.json();
-console.log(nowPlaying.track, nowPlaying.artist, nowPlaying.image);
-```
-
-`/api/health` is a liveness check, and `/api/suomirap` is a legacy 307 stream redirect—not a JSON metadata endpoint. These `/api/*` routes are on the Vercel hostname, not the IP-and-port audio proxy.
+For request examples, response fields, cache/error behavior, legacy redirect limits, and third-party usage notes, see the [API and stream integration guide](API.md).
 
 ### Audio proxy (VPS)
 
