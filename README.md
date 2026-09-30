@@ -21,7 +21,7 @@ An unofficial Vercel-hosted stream redirect and web player for Suomirap. It is n
 
 ## Important stream-integration notice
 
-The player now uses the standalone HTTPS stream proxy at `https://5.61.90.42:8443/stream`; the proxy forwards only the two allow-listed Bauer stream qualities and exposes ICY metadata to the player. The repository owner states that Bauer authorization was obtained for this relay; that statement is owner-supplied and is not independently verified here.
+The player now uses the standalone HTTPS stream proxy at `https://5.61.90.42:8443/stream`; the proxy forwards only the two allow-listed Bauer stream qualities and exposes ICY metadata to the player.
 
 The legacy `/api/suomirap` redirect retains the existing fixed IAB TCF string for compatibility. It is not collected from each visitor and must not be represented as that visitor's consent. The proxy does not collect or establish individual consent. For official listening and its consent controls, use [RadioPlay Suomirap](https://www.radioplay.fi/suomirap).
 
