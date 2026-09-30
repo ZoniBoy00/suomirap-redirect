@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#10110f">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="description" content="Kuuntele Suomirapia livenä. Näet parhaillaan soivan kappaleen ja löydät sen suoratoistopalveluista.">
 <title>Suomirap Radio — live</title>
 <style>
@@ -185,7 +186,10 @@
     localStorage.setItem('bitrate', String(bitrate));
     updateBitrateUI();
     // Reconnect with the new quality if currently playing
-    if (!player.paused && !userPaused) connectStream();
+    if (!player.paused && !userPaused) {
+      activateAudioGraphFromGesture();
+      connectStream();
+    }
   });
   updateBitrateUI();
 
@@ -208,12 +212,14 @@
     player.volume = volumeSlider.value / 100;
     player.muted = false;
     if (player.volume > 0) lastVolume = player.volume;
+    activateAudioGraphFromGesture();
     updateVolumeUI();
   });
 
   muteBtn.addEventListener('click', () => {
     player.muted = !player.muted;
     if (!player.muted && player.volume === 0) player.volume = lastVolume || 0.8;
+    activateAudioGraphFromGesture();
     updateVolumeUI();
   });
 
@@ -227,8 +233,8 @@
   playBtn.addEventListener('click', () => {
     if (player.paused || player.muted) {
       userPaused = false;
+      activateAudioGraphFromGesture();
       player.muted = false;
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
       updateVolumeUI();
       const tapBanner = $('tapBanner');
       if (tapBanner) tapBanner.remove();
@@ -247,8 +253,6 @@
 
   function connectStream() {
     userPaused = false;
-    initAudioGraph();
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     player.src = '/api/suomirap?q=' + bitrate + '&t=' + Date.now(); // fresh redirect + chosen quality
     return player.play();
   }
@@ -322,7 +326,7 @@
     document.body.appendChild(b);
     const unmute = () => {
       player.muted = false;
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      activateAudioGraphFromGesture();
       updateVolumeUI();
       b.remove();
       document.removeEventListener('click', unmute);
@@ -350,6 +354,11 @@
     } catch (e) {
       mediaSrcFailed = true;
     }
+  }
+
+  function activateAudioGraphFromGesture() {
+    initAudioGraph();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
   }
 
   // ---------------------------------------------------------------- Visualizer
