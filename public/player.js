@@ -327,16 +327,7 @@
           metadataTypes: ["icy"],
           retryTimeout: 0,
           onMetadata: (metadata) => {
-            if (loadId !== streamLoadId) return;
-            handleIcyMetadata(metadata);
-            succeed();
-          },
-          onPlay: () => {
-            if (
-              player.srcObject ||
-              (player.currentSrc && !player.currentSrc.startsWith("data:"))
-            )
-              succeed();
+            if (loadId === streamLoadId) handleIcyMetadata(metadata);
           },
           onError: reportError,
           onStop: () => {
@@ -373,6 +364,7 @@
 
     if (
       metadataPlayer &&
+      !player.paused &&
       metadataPlayer.state !== "stopped" &&
       metadataPlayer.state !== "stopping"
     ) {
