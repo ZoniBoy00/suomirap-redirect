@@ -261,6 +261,7 @@
   function startMetadataPlayer(loadId) {
     return new Promise((resolve, reject) => {
       let settled = false;
+      let audioPlayingHandler = null;
       const timeout = setTimeout(
         () => fail(new Error("Timed out waiting for the stream to start.")),
         20000,
@@ -269,6 +270,8 @@
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
+        if (audioPlayingHandler)
+          player.removeEventListener("playing", audioPlayingHandler);
         callback(value);
       };
       const toError = (message, error) => {
@@ -308,6 +311,14 @@
           handlePlaybackFailure(failure);
         }
       };
+      audioPlayingHandler = () => {
+        if (
+          player.srcObject ||
+          (player.currentSrc && !player.currentSrc.startsWith("data:"))
+        )
+          succeed();
+      };
+      player.addEventListener("playing", audioPlayingHandler);
 
       try {
         const instance = new IcecastMetadataPlayer(streamUrl(), {
@@ -316,9 +327,18 @@
           metadataTypes: ["icy"],
           retryTimeout: 0,
           onMetadata: (metadata) => {
-            if (loadId === streamLoadId) handleIcyMetadata(metadata);
+            if (loadId !== streamLoadId) return;
+            handleIcyMetadata(metadata);
+            succeed();
           },
-          onPlay: succeed,
+          onPlay: () => {
+            if (
+              player.srcObject ||
+              (player.currentSrc && !player.currentSrc.startsWith("data:"))
+            )
+              succeed();
+          },
+          onStream: succeed,
           onError: reportError,
           onStop: () => {
             if (loadId !== streamLoadId || userPaused) return;
@@ -1026,6 +1046,12 @@
   });
 
   player.addEventListener("playing", () => {
+    if (
+      metadataPlayer &&
+      !player.srcObject &&
+      player.currentSrc.startsWith("data:")
+    )
+      return;
     streamChanging = false;
     autoRetry = false;
     retryDelay = 1000;
