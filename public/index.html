@@ -39,12 +39,12 @@
   .np-actions a { display:flex;align-items:center;justify-content:center;gap:8px;min-width:112px;padding:10px 14px;text-decoration:none;color:var(--muted);font-size:12px;font-weight:650;background:#ffffff05;border:1px solid var(--line);border-radius:4px;transition:color .2s,border-color .2s,background .2s; }
   .np-actions a:hover { color:var(--accent);border-color:#d7f36a66;background:#d7f36a0a; }
   .np-actions svg { width:15px;height:15px; }
-  .viz-panel { height:90px;display:flex;align-items:center;padding:14px 0;border-bottom:1px solid var(--line); }
+  .viz-panel { height:90px;display:flex;align-items:center;padding:14px 88px 14px 0;border-bottom:1px solid var(--line);position:relative; }
   #viz { width:100%;height:58px;display:block; }
-  .play-wrap { position:relative; inset:auto; transform:none; width:76px;height:76px; margin:22px auto 0; }
-  .play-btn { width:76px;height:76px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--accent);color:#171912;cursor:pointer;box-shadow:0 8px 32px #d7f36a28;transition:transform .2s,background .2s; }
+  .play-wrap { position:absolute; right:0; top:50%; transform:translateY(-50%); width:56px;height:56px;margin:0; }
+  .play-btn { width:56px;height:56px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--accent);color:#171912;cursor:pointer;box-shadow:0 6px 22px #d7f36a20;transition:transform .2s,background .2s; }
   .play-btn:hover { transform:scale(1.06);background:#e4ff83; } .play-btn:active { transform:scale(.96); } .play-btn:focus-visible,.mute-btn:focus-visible,.np-actions a:focus-visible,.volume-slider:focus-visible { outline:2px solid var(--accent);outline-offset:4px; }
-  .play-btn svg { width:29px;height:29px;fill:currentColor; } .play-btn .icon-play { margin-left:4px; } .play-btn .icon-pause {display:none;} .playing .play-btn .icon-play {display:none;} .playing .play-btn .icon-pause {display:block;}
+  .play-btn svg { width:22px;height:22px;fill:currentColor; } .play-btn .icon-play { margin-left:3px; } .play-btn .icon-pause {display:none;} .playing .play-btn .icon-play {display:none;} .playing .play-btn .icon-pause {display:block;}
   .play-ring,.play-pulse {display:none;}
   .volume-row { display:flex;align-items:center;gap:14px;max-width:300px;margin:20px 0 0;padding:10px 12px;background:#ffffff05;border:1px solid var(--line);border-radius:4px; }
   .mute-btn { width:30px;height:30px;display:grid;place-items:center;background:none;border:0;color:var(--muted);cursor:pointer; } .mute-btn:hover {color:var(--text);} .mute-btn svg {width:19px;height:19px;fill:currentColor;}
@@ -54,7 +54,7 @@
   .vol-value {width:34px;text-align:right;color:var(--muted);font:11px ui-monospace,monospace;font-variant-numeric:tabular-nums;}
   .footer { margin-top:34px;padding-top:18px;border-top:1px solid var(--line); } .footer a {color:var(--faint);font:600 9px ui-monospace,monospace;letter-spacing:.1em;text-decoration:none;transition:color .2s;} .footer a:hover {color:var(--accent);}
   [hidden] {display:none!important;}
-  @media(max-width:600px) { body {padding:15px;} .card {padding:25px 22px 22px;} .header {margin-bottom:42px;} .header::before {top:25px;left:22px;transform:translateY(45px);} .np {gap:14px;min-height:100px;padding-bottom:20px;} .np-cover {width:68px;height:68px;} .np-track {font-size:20px;} .np-artist {font-size:13px;} .play-wrap {position:static;transform:none;margin:24px auto 4px;width:66px;height:66px;} .play-btn {width:66px;height:66px;} .play-btn svg {width:25px;height:25px;} .volume-row {margin:17px auto 0;width:100%;max-width:340px;} .np-actions {flex-wrap:wrap;} .np-actions a {flex:1;min-width:95px;padding:10px 8px;} .viz-panel {height:68px;} }
+  @media(max-width:600px) { body {padding:15px;} .card {padding:25px 22px 22px;} .header {margin-bottom:42px;} .header::before {top:25px;left:22px;transform:translateY(45px);} .np {gap:14px;min-height:100px;padding-bottom:20px;} .np-cover {width:68px;height:68px;} .np-track {font-size:20px;} .np-artist {font-size:13px;} .viz-panel {height:68px;padding-right:70px;} .play-wrap {width:48px;height:48px;} .play-btn {width:48px;height:48px;} .play-btn svg {width:20px;height:20px;} .volume-row {margin:17px auto 0;width:100%;max-width:340px;} .np-actions {flex-wrap:wrap;} .np-actions a {flex:1;min-width:95px;padding:10px 8px;} }
   @media(prefers-reduced-motion:reduce) { *,*::before,*::after {scroll-behavior:auto!important;animation:none!important;transition:none!important;} }
 </style>
 </head>
@@ -106,15 +106,14 @@
 
     <div class="viz-panel">
       <canvas id="viz"></canvas>
-    </div>
-
-    <div class="play-wrap">
-      <div class="play-pulse"></div>
-      <div class="play-ring"></div>
-      <button class="play-btn" id="playBtn" aria-label="Toista">
-        <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-      </button>
+      <div class="play-wrap">
+        <div class="play-pulse"></div>
+        <div class="play-ring"></div>
+        <button class="play-btn" id="playBtn" aria-label="Toista">
+          <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="volume-row">
