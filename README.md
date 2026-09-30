@@ -47,6 +47,8 @@ The now-playing endpoint uses a short shared cache and serves best-effort stale 
 - `https://5.61.90.42:8443/stream?q=64` — 64 kbps AAC stream with ICY metadata.
 - `https://5.61.90.42:8443/stream?q=128` — 128 kbps MP3 stream with ICY metadata.
 
+For browser requests, the proxy requires the `Origin` header to be `https://suomirap-redirect.vercel.app`. Opening a stream URL directly in the address bar does not provide that allowed origin and returns HTTP 403 (`Origin not allowed`); use the player page for playback.
+
 ## Development
 
 Requires Node.js 22.x.
