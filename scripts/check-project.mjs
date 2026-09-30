@@ -50,6 +50,10 @@ assert.ok(
   playerJs.includes("https://5.61.90.42:8443/stream"),
   "the player must use the HTTPS ICY proxy",
 );
+assert.ok(
+  !playerJs.includes("attemptAutoplay"),
+  "the player must wait for an explicit user action before connecting",
+);
 
 const icecastScriptIndex = html.indexOf(
   "icecast-metadata-player-1.17.13.main.min.js",
@@ -82,10 +86,14 @@ assert.ok(
   "CSP must allow the ICY proxy fetch",
 );
 assert.ok(
+  contentSecurityPolicy?.includes("worker-src 'self' blob:"),
+  "CSP must allow the library's blob-backed codec worker",
+);
+assert.ok(
   contentSecurityPolicy?.includes(
-    "media-src 'self' data: https://5.61.90.42:8443",
+    "media-src 'self' data: blob: https://5.61.90.42:8443",
   ),
-  "CSP must allow proxy audio media",
+  "CSP must allow blob-based MSE playback and the silent readiness media",
 );
 
 for (const path of [

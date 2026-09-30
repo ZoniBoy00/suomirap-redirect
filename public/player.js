@@ -1106,28 +1106,6 @@
     }
   }, 5000);
 
-  function attemptAutoplay() {
-    connectStream()
-      .then((started) => {
-        if (started || userPaused) return;
-        if (player.paused) return;
-      })
-      .catch((error) => {
-        if (userPaused) return;
-        if (error?.name !== "NotAllowedError") {
-          scheduleReconnect();
-          return;
-        }
-        player.muted = true;
-        updateVolumeUI();
-        connectStream()
-          .then((started) => {
-            if (started) showUnmuteBanner();
-          })
-          .catch(() => scheduleReconnect());
-      });
-  }
-
   $("copyTrackBtn").addEventListener("click", async () => {
     if (!currentTrack) return;
     const text = `${currentTrack.artist ? `${currentTrack.artist} — ` : ""}${currentTrack.track}`;
@@ -1236,5 +1214,4 @@
   drawIdle();
   fetchNowPlaying();
   updatePolling();
-  attemptAutoplay();
 })();
