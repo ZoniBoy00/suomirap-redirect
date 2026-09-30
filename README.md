@@ -27,13 +27,25 @@ The legacy `/api/suomirap` redirect retains the existing fixed IAB TCF string fo
 
 ## Endpoints
 
-- `/` — web player.
-- `https://5.61.90.42:8443/stream?q=64|128` — HTTPS ICY proxy used by the player; only the two configured stream qualities are accepted.
-- `/api/suomirap` — legacy 307 redirect to Bauer's stream integration; `?q=64` and `?q=128` select the allow-listed qualities. The web player no longer uses this redirect for audio.
-- `/api/nowplaying` — track, artist, HTTPS-validated artwork and Apple Music URL, track start/duration, current and next show. It prefers Bauer's Listen API and falls back to the public station page. Upstream requests have four-second timeouts; the station schedule is cached in a warm function instance for five minutes.
-- `/api/health` — no-store liveness response. It does not make an upstream Bauer request.
+There are two separate hosts:
 
-The metadata endpoint uses a short shared cache and serves best-effort stale data during upstream errors when a warm function instance has a previous successful result. The serverless instance cache is not durable storage.
+- `https://suomirap-redirect.vercel.app` serves the website and its `/api/*` routes.
+- `https://5.61.90.42:8443` is the dedicated stream proxy. It exposes only `/health` and `/stream`; Vercel `/api/*` routes do not exist on this host and return 404.
+
+### Website and API (Vercel)
+
+- `https://suomirap-redirect.vercel.app/` — web player.
+- `https://suomirap-redirect.vercel.app/api/nowplaying` — track, artist, HTTPS-validated artwork and Apple Music URL, track start/duration, current and next show. It prefers Bauer's Listen API and falls back to the public station page. Upstream requests have four-second timeouts; the station schedule is cached in a warm function instance for five minutes.
+- `https://suomirap-redirect.vercel.app/api/health` — no-store liveness response. It does not make an upstream Bauer request.
+- `https://suomirap-redirect.vercel.app/api/suomirap?q=64` and `https://suomirap-redirect.vercel.app/api/suomirap?q=128` — legacy 307 redirects to Bauer's stream integration. The web player no longer uses this redirect for audio.
+
+The now-playing endpoint uses a short shared cache and serves best-effort stale data during upstream errors when a warm function instance has a previous successful result. The serverless instance cache is not durable storage.
+
+### Audio proxy (VPS)
+
+- `https://5.61.90.42:8443/health` — proxy liveness check.
+- `https://5.61.90.42:8443/stream?q=64` — 64 kbps AAC stream with ICY metadata.
+- `https://5.61.90.42:8443/stream?q=128` — 128 kbps MP3 stream with ICY metadata.
 
 ## Development
 
