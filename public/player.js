@@ -49,9 +49,11 @@
     },
   };
   const FALLBACK_COVER = "/cover-fallback.svg";
+  const PROXY_STREAM_URL = "https://5.61.90.42:8443/stream";
   const reduceMotion =
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || false;
-  const { getTrackTiming, paginateHistory } = window.RadioPlayerUtils;
+  const { getTrackTiming, paginateHistory, parseIcyTrackTitle, sameTrack } =
+    window.RadioPlayerUtils;
   const HISTORY_PAGE_SIZE = 5;
 
   let bitrate = Number.parseInt(STORAGE.get("bitrate"), 10);
@@ -72,6 +74,8 @@
   let bufferTimer = null;
   let streamLoadId = 0;
   let streamChanging = false;
+  let metadataPlayer = null;
+  let streamSyncActive = false;
   let buffering = false;
   let stalledIntervals = 0;
   let lastTime = 0;
@@ -89,6 +93,9 @@
   let currentTrack = null;
   let currentTrackKey = "";
   let trackStartedAt = "";
+  let latestNowPlayingData = null;
+  let currentIcyTrack = null;
+  let icyTrackStartedAt = "";
   let historyPage = 0;
   const canvas = $("viz");
   const ctx = canvas.getContext("2d");
@@ -213,7 +220,128 @@
   }
 
   function streamUrl() {
-    return `/api/suomirap?q=${bitrate}&t=${Date.now()}`;
+    const url = new URL(PROXY_STREAM_URL);
+    url.searchParams.set("q", String(bitrate));
+    return url.href;
+  }
+
+  function stopMetadataPlayer() {
+    const active = metadataPlayer;
+    metadataPlayer = null;
+    streamSyncActive = false;
+    if (!active) return null;
+
+    const stopped =
+      active.state === "stopped"
+        ? Promise.resolve()
+        : new Promise((resolve) => {
+            const onStopped = () => {
+              active.removeEventListener("stopped", onStopped);
+              resolve();
+            };
+            active.addEventListener("stopped", onStopped, { once: true });
+            if (active.state === "stopped") onStopped();
+          });
+    const detached = active.detachAudioElement().catch(() => {});
+    return Promise.all([detached, stopped]).then(() => {});
+  }
+
+  function releasePlayerAfterStop(loadId) {
+    const stopped = stopMetadataPlayer();
+    const release = () => {
+      if (loadId !== streamLoadId || !userPaused) return;
+      player.pause();
+      player.removeAttribute("src");
+      player.load();
+    };
+    if (stopped) void stopped.then(release, release);
+    else release();
+  }
+
+  function startMetadataPlayer(loadId) {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const timeout = setTimeout(
+        () => fail(new Error("Timed out waiting for the stream to start.")),
+        20000,
+      );
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        callback(value);
+      };
+      const toError = (message, error) => {
+        const result =
+          error instanceof Error
+            ? error
+            : new Error(
+                typeof error === "string"
+                  ? error
+                  : String(message || "ICY stream failed."),
+              );
+        if (error?.name) result.name = error.name;
+        return result;
+      };
+      const fail = (error) => {
+        if (loadId === streamLoadId) streamSyncActive = false;
+        finish(reject, error);
+      };
+      const succeed = () => {
+        if (loadId !== streamLoadId || userPaused) {
+          fail(
+            Object.assign(new Error("Stream start canceled."), {
+              name: "AbortError",
+            }),
+          );
+          return;
+        }
+        streamSyncActive = true;
+        finish(resolve, true);
+      };
+      const reportError = (message, error) => {
+        const failure = toError(message, error);
+        if (!settled) fail(failure);
+        else if (loadId === streamLoadId && !userPaused) {
+          streamSyncActive = false;
+          streamChanging = true;
+          handlePlaybackFailure(failure);
+        }
+      };
+
+      try {
+        const instance = new IcecastMetadataPlayer(streamUrl(), {
+          audioElement: player,
+          bufferLength: 1,
+          metadataTypes: ["icy"],
+          retryTimeout: 0,
+          onMetadata: (metadata) => {
+            if (loadId === streamLoadId) handleIcyMetadata(metadata);
+          },
+          onPlay: succeed,
+          onError: reportError,
+          onStop: () => {
+            if (loadId !== streamLoadId || userPaused) return;
+            streamSyncActive = false;
+            if (!settled) {
+              fail(new Error("Stream stopped before playback started."));
+              return;
+            }
+            streamChanging = true;
+            setPlaying(false);
+            setStatus("Striimiyhteys katkesi. Yhdistetään uudelleen…");
+            scheduleReconnect();
+          },
+        });
+        metadataPlayer = instance;
+        streamSyncActive = true;
+        instance
+          .play()
+          .then(succeed, (error) => fail(toError("Playback failed.", error)));
+      } catch (error) {
+        fail(toError("Could not create the ICY stream player.", error));
+      }
+    });
   }
 
   function connectStream({ userInitiated = false } = {}) {
@@ -223,16 +351,42 @@
       clearReconnect();
     }
     if (userPaused) return Promise.resolve(false);
+
+    if (
+      metadataPlayer &&
+      metadataPlayer.state !== "stopped" &&
+      metadataPlayer.state !== "stopping"
+    ) {
+      streamChanging = true;
+      buffering = false;
+      streamSyncActive = true;
+      setStatus("Vaihdetaan striimin laatua…");
+      return metadataPlayer
+        .switchEndpoint(streamUrl(), { retryTimeout: 0 })
+        .then(() => {
+          if (userPaused) return false;
+          streamChanging = false;
+          retryDelay = 1000;
+          autoRetry = false;
+          setPlaying(true);
+          return true;
+        })
+        .catch((error) => {
+          streamChanging = false;
+          throw error;
+        });
+    }
+
     const loadId = ++streamLoadId;
     streamChanging = true;
     buffering = false;
     setStatus("Yhdistetään Suomirap-radioon…");
-    try {
-      player.src = streamUrl();
-      return player
-        .play()
+    const previous = stopMetadataPlayer();
+    const start = () => {
+      if (loadId !== streamLoadId || userPaused) return false;
+      return startMetadataPlayer(loadId)
         .then(() => {
-          if (loadId !== streamLoadId) return false;
+          if (loadId !== streamLoadId || userPaused) return false;
           streamChanging = false;
           retryDelay = 1000;
           autoRetry = false;
@@ -245,10 +399,26 @@
             return false;
           throw error;
         });
-    } catch (error) {
-      streamChanging = false;
-      return Promise.reject(error);
-    }
+    };
+    return previous ? previous.then(start) : start();
+  }
+
+  function handleIcyMetadata(metadata) {
+    const track = parseIcyTrackTitle(metadata?.StreamTitle);
+    if (!track || sameTrack(track, currentIcyTrack)) return;
+
+    currentIcyTrack = track;
+    icyTrackStartedAt = new Date().toISOString();
+    const apiData =
+      latestNowPlayingData && sameTrack(latestNowPlayingData, track)
+        ? latestNowPlayingData
+        : {};
+    renderNowPlaying({
+      ...apiData,
+      track: track.track,
+      artist: track.artist || apiData.artist || "",
+      trackStartedAt: icyTrackStartedAt,
+    });
   }
 
   function clearReconnect() {
@@ -265,10 +435,8 @@
     mutedAutoplayTimer = null;
     userPaused = true;
     clearReconnect();
-    ++streamLoadId;
-    player.pause();
-    player.removeAttribute("src");
-    player.load();
+    const loadId = ++streamLoadId;
+    releasePlayerAfterStop(loadId);
     player.muted = true;
     setPlaying(false);
     setStatus(message);
@@ -279,11 +447,9 @@
     clearReconnect();
     if (bufferTimer !== null) clearTimeout(bufferTimer);
     bufferTimer = null;
-    ++streamLoadId;
+    const loadId = ++streamLoadId;
     streamChanging = false;
-    player.pause();
-    player.removeAttribute("src");
-    player.load();
+    releasePlayerAfterStop(loadId);
     setPlaying(false);
     setStatus(message);
     updateMediaSessionState();
@@ -573,11 +739,12 @@
     }
   });
 
-  function updateNowPlaying(data) {
+  function renderNowPlaying(data) {
     const track = data.track || "Tuntematon kappale";
     const artist = data.artist || "";
     const key = `${artist}\u0000${track}`;
-    const changed = key !== currentTrackKey;
+    const changed =
+      !currentTrack || !sameTrack(currentTrack, { track, artist });
     currentTrack = {
       track,
       artist,
@@ -619,6 +786,21 @@
     npActions.hidden = false;
     updateMediaSessionMetadata(data);
     npFresh.textContent = trackStartedAt ? npFresh.textContent : "";
+  }
+
+  function updateNowPlaying(data) {
+    latestNowPlayingData = data;
+    if (!streamSyncActive) {
+      renderNowPlaying(data);
+      return;
+    }
+    if (!currentIcyTrack || !sameTrack(data, currentIcyTrack)) return;
+    renderNowPlaying({
+      ...data,
+      track: currentIcyTrack.track,
+      artist: currentIcyTrack.artist || data.artist || "",
+      trackStartedAt: icyTrackStartedAt,
+    });
   }
 
   function updateShow(show) {
@@ -859,6 +1041,8 @@
       return;
     }
     userPaused = true;
+    ++streamLoadId;
+    streamSyncActive = false;
     clearReconnect();
     setPlaying(false);
     setStatus("Toisto pysäytetty mediapainikkeella.");

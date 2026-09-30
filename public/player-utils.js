@@ -56,5 +56,52 @@
     };
   }
 
-  window.RadioPlayerUtils = Object.freeze({ getTrackTiming, paginateHistory });
+  function parseIcyTrackTitle(value) {
+    if (typeof value !== "string") return null;
+    const title = value.replace(/\0/g, "").replace(/\s+/g, " ").trim();
+    if (!title) return null;
+
+    let splitIndex = -1;
+    let separatorLength = 0;
+    for (const separator of [" - ", " – ", " — "]) {
+      const index = title.lastIndexOf(separator);
+      if (index > splitIndex) {
+        splitIndex = index;
+        separatorLength = separator.length;
+      }
+    }
+    if (splitIndex < 0) return { track: title, artist: "" };
+
+    const track = title.slice(0, splitIndex).trim();
+    const artist = title.slice(splitIndex + separatorLength).trim();
+    return track && artist ? { track, artist } : { track: title, artist: "" };
+  }
+
+  function normalizeTrackLabel(value) {
+    return typeof value === "string"
+      ? value
+          .normalize("NFKD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLocaleLowerCase("fi-FI")
+      : "";
+  }
+
+  function sameTrack(left, right) {
+    const leftTrack = normalizeTrackLabel(left?.track);
+    const rightTrack = normalizeTrackLabel(right?.track);
+    if (!leftTrack || leftTrack !== rightTrack) return false;
+
+    const leftArtist = normalizeTrackLabel(left?.artist);
+    const rightArtist = normalizeTrackLabel(right?.artist);
+    return !leftArtist || !rightArtist || leftArtist === rightArtist;
+  }
+
+  window.RadioPlayerUtils = Object.freeze({
+    getTrackTiming,
+    paginateHistory,
+    parseIcyTrackTitle,
+    sameTrack,
+  });
 })();

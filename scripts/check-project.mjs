@@ -46,6 +46,20 @@ new Script(playerUtils, { filename: "public/player-utils.js" });
 const playerJs = await read("public/player.js");
 new Script(playerJs, { filename: "public/player.js" });
 
+assert.ok(
+  playerJs.includes("https://5.61.90.42:8443/stream"),
+  "the player must use the HTTPS ICY proxy",
+);
+
+const icecastScriptIndex = html.indexOf(
+  "icecast-metadata-player-1.17.13.main.min.js",
+);
+assert.ok(
+  icecastScriptIndex >= 0 &&
+    icecastScriptIndex < html.indexOf('src="/player-utils.js"'),
+  "the ICY player library must load before player utilities",
+);
+
 const vercel = JSON.parse(await read("vercel.json"));
 const headers = vercel.headers?.flatMap((rule) => rule.headers || []) || [];
 for (const name of [
@@ -60,10 +74,31 @@ for (const name of [
   );
 }
 
+const contentSecurityPolicy = headers.find(
+  (header) => header.key === "Content-Security-Policy",
+)?.value;
+assert.ok(
+  contentSecurityPolicy?.includes("connect-src 'self' https://5.61.90.42:8443"),
+  "CSP must allow the ICY proxy fetch",
+);
+assert.ok(
+  contentSecurityPolicy?.includes("media-src 'self' https://5.61.90.42:8443"),
+  "CSP must allow proxy audio media",
+);
+
 for (const path of [
   "public/styles.css",
   "public/player.js",
   "public/player-utils.js",
+  "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.main.min.js",
+  "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.common.min.js",
+  "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.mediasource.min.js",
+  "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.mpeg.min.js",
+  "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.synaudio.min.js",
+  "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.flac.min.js",
+  "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.opus.min.js",
+  "public/vendor/icecast-metadata-player-1.17.13/build/icecast-metadata-player-1.17.13.vorbis.min.js",
+  "vendor/icecast-metadata-player-1.17.13/LICENSE",
   "public/favicon.svg",
   "public/cover-fallback.svg",
   "public/og-image.png",

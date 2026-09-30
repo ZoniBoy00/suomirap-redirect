@@ -9,7 +9,40 @@ const source = await readFile(
 );
 const window = {};
 runInNewContext(source, { window });
-const { getTrackTiming, paginateHistory } = window.RadioPlayerUtils;
+const { getTrackTiming, paginateHistory, parseIcyTrackTitle, sameTrack } =
+  window.RadioPlayerUtils;
+
+test("parses track-first ICY titles and strips padding and null bytes", () => {
+  const parsed = parseIcyTrackTitle("  Mehu – Tippa\u0000  ");
+  assert.deepEqual({ ...parsed }, { track: "Mehu", artist: "Tippa" });
+  assert.deepEqual(
+    { ...parseIcyTrackTitle("No separator\u0000") },
+    {
+      track: "No separator",
+      artist: "",
+    },
+  );
+  assert.equal(parseIcyTrackTitle("  "), null);
+  assert.equal(parseIcyTrackTitle(null), null);
+});
+
+test("matches ICY and API track labels case- and accent-insensitively", () => {
+  assert.equal(
+    sameTrack(
+      { track: "Räppiä", artist: "JVG" },
+      { track: "Rappia", artist: "jvg" },
+    ),
+    true,
+  );
+  assert.equal(
+    sameTrack(
+      { track: "Same song", artist: "Different artist" },
+      { track: "Same song", artist: "Another artist" },
+    ),
+    false,
+  );
+  assert.equal(sameTrack({ track: "" }, { track: "" }), false);
+});
 
 test("caps elapsed time at the reported track duration and marks the next-track wait", () => {
   const start = Date.parse("2026-09-30T10:00:00Z");
