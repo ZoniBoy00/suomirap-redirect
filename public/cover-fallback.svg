@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Suomirap Radio -kansikuva">
+  <rect width="320" height="320" rx="32" fill="#171814"/>
+  <circle cx="160" cy="160" r="138" fill="#10110f" stroke="#55574a" stroke-width="3"/>
+  <circle cx="160" cy="160" r="116" fill="none" stroke="#34362d" stroke-width="2"/>
+  <circle cx="160" cy="160" r="94" fill="none" stroke="#34362d" stroke-width="2"/>
+  <circle cx="160" cy="160" r="72" fill="#d7f36a"/>
+  <text x="160" y="174" fill="#171912" font-family="system-ui,sans-serif" font-size="42" font-weight="800" text-anchor="middle" letter-spacing="3">SR</text>
+  <circle cx="160" cy="160" r="8" fill="#10110f"/>
+</svg>

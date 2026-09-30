@@ -1,56 +1,67 @@
-# Suomirap Radio Redirect
+# Suomirap Radio
 
-A Vercel-hosted redirect service and web player for the live Suomirap radio stream.
+An unofficial Vercel-hosted stream redirect and web player for Suomirap. It is not operated, sponsored, or approved by RadioPlay or Bauer Media.
+
+![Suomirap Radio player](public/screenshot.png)
+
+> Music, artwork, station branding, and stream rights remain with their respective owners. This repository's MIT license covers only its original source code; it does not grant rights to Bauer's stream or media.
 
 ## Features
 
-- Stable stream URL that generates a fresh Bauer `skey` on every request.
-- 64 kbps AAC (default) and 128 kbps MP3 stream quality options.
-- Web player with now-playing track and artwork, on-air show information, music-service search links, volume control, and an audio visualizer.
-- A spinning vinyl record using the current track artwork; the record spins while playback is active.
-- Autoplay attempt with a muted fallback, play/pause controls, and automatic stream reconnects.
+- 64 kbps AAC and 128 kbps MP3 stream choices.
+- Responsive dark player with playback state, volume, audio visualizer, album artwork, and a fallback cover.
+- Track and artist metadata, current and next scheduled show, service search links, track history, copy/share actions, and a sleep timer.
+- Keyboard shortcuts: Space toggles playback, `M` toggles mute, and Up/Down adjusts volume when focus is not in a form control.
+- Media Session metadata and media-button play/pause support where the browser provides the API.
+- Remembered quality and volume settings. Storage failures are handled without preventing playback.
+- An API health endpoint, parser fixtures and tests, CI checks, and a scheduled GitHub Actions endpoint monitor.
 
-## Stream URLs
+## Important stream-integration notice
 
-Use either URL in a compatible audio player or directory:
+The existing redirect preserves the project's current Bauer stream integration. In particular, it forwards a fixed IAB TCF string; it is **not collected from each visitor and must not be treated as that visitor's consent**. This implementation has not been approved by Bauer. The repository owner has chosen to leave the current integration unchanged for now; its authorization and consent handling remain unresolved. Do not present the fixed value as proof of listener consent. For official listening and its consent controls, use [RadioPlay Suomirap](https://www.radioplay.fi/suomirap).
 
-```text
-https://suomirap-redirect.vercel.app/api/suomirap
-https://suomirap-redirect.vercel.app/api/suomirap?q=64
-https://suomirap-redirect.vercel.app/api/suomirap?q=128
-```
-
-`q=64` selects 64 kbps AAC. `q=128` selects 128 kbps MP3. If `q` is omitted or unsupported, the endpoint defaults to 64 kbps AAC.
-
-The web player is available at:
-
-```text
-https://suomirap-redirect.vercel.app
-```
-
-Browsers may block audible autoplay. If playback does not start automatically, use the play button.
-
-## How it works
-
-The stream mounts validate the `aw_0_1st.skey` query parameter. The redirect endpoint generates a current Unix timestamp, adds the stream's consent parameters, and responds with a `307 Temporary Redirect` to the selected Bauer stream mount.
-
-The `/api/nowplaying` endpoint fetches track metadata from Bauer's public Listen API and the station page in parallel. It prefers the Listen API for track and artist details, falls back to the station page when needed, and reads the current on-air show from the station page's embedded schedule. The endpoint uses a short shared cache (`s-maxage=15`, `stale-while-revalidate=30`).
+The redirect is not an official Bauer API. Bauer may change or disable the upstream behavior at any time. Check the applicable terms and obtain authorization before broader distribution. This README is a technical disclosure, not legal advice.
 
 ## Endpoints
 
-- `GET /` — web player (`public/index.html`)
-- `GET /api/suomirap` — redirects to the 64 kbps AAC stream by default
-- `GET /api/suomirap?q=64` — redirects to the 64 kbps AAC stream
-- `GET /api/suomirap?q=128` — redirects to the 128 kbps MP3 stream
-- `GET /api/nowplaying` — returns JSON track metadata, artwork, Apple Music URL, source, and current show (when available)
+- `/` — web player.
+- `/api/suomirap` — 307 redirect to the existing 64 kbps stream integration; `?q=64` and `?q=128` select the allow-listed qualities. The redirect is marked `Cache-Control: no-store` because it uses a time-based key.
+- `/api/nowplaying` — track, artist, HTTPS-validated artwork and Apple Music URL, track start/duration, current and next show. It prefers Bauer's Listen API and falls back to the public station page. Upstream requests have four-second timeouts; the station schedule is cached in a warm function instance for five minutes.
+- `/api/health` — no-store liveness response. It does not make an upstream Bauer request.
 
-## Deploy your own
+The metadata endpoint uses a short shared cache and serves best-effort stale data during upstream errors when a warm function instance has a previous successful result. The serverless instance cache is not durable storage.
 
-Install the Vercel CLI and deploy from the repository root:
+## Development
+
+Requires Node.js 22.x.
 
 ```bash
-npm install --global vercel
-vercel
+npm install
+npm run check
+npm test
 ```
 
-Alternatively, import the repository into a Vercel project. If Git-based deployments are enabled and `master` is configured as the production branch, pushes to `master` deploy automatically. Deployment behavior depends on the Vercel project settings; it is not configured by `vercel.json` alone.
+`npm run check` validates the static HTML shell, player JavaScript, configured security headers and required assets, runs API syntax checks, and checks Prettier formatting. `npm test` runs the built-in Node test runner against saved API fixtures and endpoint behavior.
+
+GitHub Actions runs the checks on pushes to `master` and pull requests. A scheduled monitor checks the deployed `/api/health` and `/api/nowplaying` endpoints every 15 minutes, opens one issue when a check fails, and closes it after recovery. It uses GitHub's own issue/API logs; no third-party telemetry service is installed.
+
+## Deployment
+
+The canonical deployment used in metadata and monitoring is:
+
+```text
+https://suomirap-redirect.vercel.app/
+```
+
+The project can be imported into Vercel with the Git repository. If Git-based deployments are enabled and `master` is the production branch, pushing to `master` triggers deployment. Actual deployment behavior depends on the Vercel project settings.
+
+## Operational choices and limits
+
+- The functions use Vercel's Node request/response handler contract; the redirect has not been moved to Edge Runtime. Do not assume an Edge conversion is faster or cheaper without profiling and adapting the handler contract.
+- There is no blanket rate limit on the public stream URL; a per-IP limit could interrupt directory listings and listeners, and this project has no shared rate-limit store. Monitor Vercel function usage before adding one.
+- iOS volume uses a Web Audio `GainNode`. Desktop Chromium playback and UI were browser-tested; playback, AirPlay, and background audio still need testing on a physical iPhone/Safari device.
+- AirPlay is exposed only when the browser offers its native target-picker API. Chromecast is not included.
+
+## License
+
+The repository's original code is MIT-licensed (see `LICENSE`). Bauer/RadioPlay streams, station marks, artwork, and metadata remain subject to their owners' terms and rights.

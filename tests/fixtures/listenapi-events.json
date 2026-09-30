@@ -1,0 +1,22 @@
+[
+  {
+    "nowPlayingTrackId": 900001,
+    "nowPlayingTrack": "Testikappale \"Kertosäe\"",
+    "nowPlayingArtist": "Esimerkkiesittäjä",
+    "nowPlayingImage": "https://media.bauerradio.com/image/upload/tracks/900001.jpg",
+    "nowPlayingSmallImage": "https://media.bauerradio.com/image/upload/tracks/160x160/900001.jpg",
+    "nowPlayingTime": "2026-09-30 08:36:41",
+    "nowPlayingDuration": 214,
+    "nowPlayingAppleMusicUrl": "https://music.apple.com/fi/album/example/900001"
+  },
+  {
+    "nowPlayingTrackId": 900000,
+    "nowPlayingTrack": "Vanhempi kappale",
+    "nowPlayingArtist": "Toinen esittäjä",
+    "nowPlayingImage": "",
+    "nowPlayingSmallImage": "",
+    "nowPlayingTime": "2026-09-30 08:27:26",
+    "nowPlayingDuration": 180,
+    "nowPlayingAppleMusicUrl": ""
+  }
+]

@@ -1,480 +1,284 @@
-﻿<!DOCTYPE html>
+<!doctype html>
 <html lang="fi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#10110f">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<meta name="description" content="Kuuntele Suomirapia livenä. Näet parhaillaan soivan kappaleen ja löydät sen suoratoistopalveluista.">
-<title>Suomirap Radio — live</title>
-<style>
-  * { box-sizing: border-box; }
-  :root { color-scheme: dark; --bg:#10110f; --panel:#191a17; --panel-2:#20211d; --line:#33342e; --text:#f1f0e8; --muted:#a09f94; --faint:#74746b; --accent:#d7f36a; --live:#e87962; }
-  html { scroll-behavior:smooth; }
-  body { min-height:100vh; margin:0; display:grid; place-items:center; padding:clamp(22px,5vw,72px); color:var(--text); background:radial-gradient(ellipse at 16% 12%,#292b22 0,transparent 42%),radial-gradient(ellipse at 90% 92%,#24251f 0,transparent 38%),var(--bg); font-family:Inter,"Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
-  .aurora,.grain { position:fixed; inset:0; pointer-events:none; }
-  .aurora { opacity:.22; background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px); background-size:56px 56px; mask-image:linear-gradient(to bottom,#000,transparent 85%); }
-  .orb { display:none; } .grain { opacity:.035; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-  .card { z-index:2; width:min(100%,980px); padding:clamp(26px,5vw,58px); border:1px solid #373830; border-radius:8px; background:linear-gradient(135deg,rgba(31,32,28,.97),rgba(20,21,19,.97)); box-shadow:0 32px 100px #0008; position:relative; }
-  .header { display:flex; align-items:center; justify-content:space-between; padding-bottom:27px; border-bottom:1px solid var(--line); margin-bottom:clamp(34px,6vw,68px); }
-  .header::before { content:"SUOMIRAP"; display:block; position:absolute; top:clamp(26px,5vw,58px); left:clamp(26px,5vw,58px); transform:translateY(48px); font-size:11px; letter-spacing:.2em; color:var(--muted); font-weight:700; }
-  .live-badge { display:flex; align-items:center; gap:9px; color:var(--live); font-size:11px; font-weight:800; letter-spacing:.17em; }
-  .live-dot { width:8px;height:8px;border-radius:50%;background:var(--live); box-shadow:0 0 14px #e8796266; animation:blink 1.8s ease-in-out infinite; }
-  @keyframes blink { 50% { opacity:.35; } }
-  .bitrate { color:var(--faint); font:600 10px ui-monospace,monospace; letter-spacing:.12em; display:flex; align-items:center; gap:6px; }
-  .bit-chip { background:none; border:1px solid var(--line); color:var(--faint); font:700 10px ui-monospace,monospace; padding:5px 8px; border-radius:3px; cursor:pointer; transition:color .2s,border-color .2s,background .2s; }
-  .bit-chip:hover { color:var(--text); border-color:#d7f36a66; }
-  .bit-chip.active { color:#171912; background:var(--accent); border-color:var(--accent); }
-  .bit-unit { color:var(--faint); }
-  .onair { display:flex; align-items:center; gap:16px; padding:16px 0; border-bottom:1px solid var(--line); }
-  .onair-label { color:var(--live); font-size:10px; font-weight:800; letter-spacing:.2em; flex:none; }
-  .onair-title { font-size:14px; font-weight:650; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .np { display:flex;align-items:center;gap:22px;min-height:132px;padding:0 0 25px;border-bottom:1px solid var(--line);position:relative; }
-  .record { position:relative;display:grid;place-items:center;flex:none;width:94px;height:94px;border:1px solid #42433c;border-radius:50%;background:repeating-radial-gradient(circle at center,#242521 0 1px,#10110f 1.5px 3px,#1a1b18 3.5px 5px);box-shadow:0 8px 24px #0007,inset 0 0 0 4px #0a0b09;animation:vinyl-spin 8s linear infinite;animation-play-state:paused; }
-  .playing .record { animation-play-state:running; }
-  .record::after { content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;transform:translate(-50%,-50%);border:1px solid #ffffff80;border-radius:50%;background:#1a1b18;pointer-events:none; }
-  @keyframes vinyl-spin { to { transform:rotate(360deg); } }
-  .np-cover { width:86px;height:86px;object-fit:cover;flex:none;border-radius:50%;border:1px solid #ffffff35;box-shadow:0 1px 5px #000a; }
-  .np-info { min-width:0; flex:1; }
-  .np-label { color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.2em; margin-bottom:10px; }
-  .np-track { font-size:clamp(21px,4vw,36px); font-weight:750; line-height:1.12; letter-spacing:-.045em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .np-artist { margin-top:8px;color:var(--muted);font-size:15px; }
-  .np-fresh { margin-top:7px;color:var(--faint);font-size:11px; }
-  .np-actions { display:flex; gap:9px; margin:18px 0 0; }
-  .np-actions a { display:flex;align-items:center;justify-content:center;gap:8px;min-width:112px;padding:10px 14px;text-decoration:none;color:var(--muted);font-size:12px;font-weight:650;background:#ffffff05;border:1px solid var(--line);border-radius:4px;transition:color .2s,border-color .2s,background .2s; }
-  .np-actions a:hover { color:var(--accent);border-color:#d7f36a66;background:#d7f36a0a; }
-  .np-actions svg { width:15px;height:15px; }
-  .viz-panel { height:90px;display:flex;align-items:center;padding:14px 88px 14px 0;border-bottom:1px solid var(--line);position:relative; }
-  #viz { width:100%;height:58px;display:block; }
-  .play-wrap { position:absolute; right:0; top:50%; transform:translateY(-50%); width:56px;height:56px;margin:0; }
-  .play-btn { width:56px;height:56px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--accent);color:#171912;cursor:pointer;box-shadow:0 6px 22px #d7f36a20;transition:transform .2s,background .2s; }
-  .play-btn:hover { transform:scale(1.06);background:#e4ff83; } .play-btn:active { transform:scale(.96); } .play-btn:focus-visible,.mute-btn:focus-visible,.np-actions a:focus-visible,.volume-slider:focus-visible { outline:2px solid var(--accent);outline-offset:4px; }
-  .play-btn svg { width:22px;height:22px;fill:currentColor; } .play-btn .icon-play { margin-left:3px; } .play-btn .icon-pause {display:none;} .playing .play-btn .icon-play {display:none;} .playing .play-btn .icon-pause {display:block;}
-  .play-ring,.play-pulse {display:none;}
-  .volume-row { display:flex;align-items:center;gap:14px;max-width:300px;margin:20px 0 0;padding:10px 12px;background:#ffffff05;border:1px solid var(--line);border-radius:4px; }
-  .mute-btn { width:30px;height:30px;display:grid;place-items:center;background:none;border:0;color:var(--muted);cursor:pointer; } .mute-btn:hover {color:var(--text);} .mute-btn svg {width:19px;height:19px;fill:currentColor;}
-  .volume-slider {appearance:none;flex:1;height:3px;border-radius:4px;background:linear-gradient(to right,var(--accent) var(--vol,80%),#ffffff20 var(--vol,80%));cursor:pointer;}
-  .volume-slider::-webkit-slider-thumb {appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);}
-  .volume-slider::-moz-range-thumb {width:13px;height:13px;border:0;border-radius:50%;background:var(--accent);}
-  .vol-value {width:34px;text-align:right;color:var(--muted);font:11px ui-monospace,monospace;font-variant-numeric:tabular-nums;}
-  .footer { margin-top:34px;padding-top:18px;border-top:1px solid var(--line); } .footer a {color:var(--faint);font:600 9px ui-monospace,monospace;letter-spacing:.1em;text-decoration:none;transition:color .2s;} .footer a:hover {color:var(--accent);}
-  [hidden] {display:none!important;}
-  @media(max-width:600px) { body {padding:15px;} .card {padding:25px 22px 22px;} .header {margin-bottom:42px;} .header::before {top:25px;left:22px;transform:translateY(45px);} .np {gap:14px;min-height:100px;padding-bottom:20px;} .record {width:68px;height:68px;} .np-cover {width:60px;height:60px;} .np-track {font-size:20px;} .np-artist {font-size:13px;} .viz-panel {height:68px;padding-right:70px;} .play-wrap {width:48px;height:48px;} .play-btn {width:48px;height:48px;} .play-btn svg {width:20px;height:20px;} .volume-row {margin:17px auto 0;width:100%;max-width:340px;} .np-actions {flex-wrap:wrap;} .np-actions a {flex:1;min-width:95px;padding:10px 8px;} }
-  @media(prefers-reduced-motion:reduce) { *,*::before,*::after {scroll-behavior:auto!important;animation:none!important;transition:none!important;} }
-</style>
-</head>
-<body>
-  <div class="aurora">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
-  <div class="grain"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10110f" />
+    <meta
+      name="description"
+      content="Kuuntele Suomirapia livenä. Suomirap Radio on epävirallinen verkkosoitin, joka näyttää parhaillaan soivan kappaleen."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Suomirap Radio" />
+    <meta property="og:title" content="Suomirap Radio — suorana" />
+    <meta
+      property="og:description"
+      content="Kuuntele Suomirapia livenä ja katso, mikä kappale soi juuri nyt."
+    />
+    <meta property="og:url" content="https://suomirap-redirect.vercel.app/" />
+    <meta
+      property="og:image"
+      content="https://suomirap-redirect.vercel.app/og-image.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Suomirap Radio — suorana" />
+    <meta name="twitter:description" content="Kuuntele Suomirapia livenä." />
+    <meta
+      name="twitter:image"
+      content="https://suomirap-redirect.vercel.app/og-image.png"
+    />
+    <link rel="canonical" href="https://suomirap-redirect.vercel.app/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://media.bauerradio.com" crossorigin />
+    <link
+      rel="preconnect"
+      href="https://live-bauerfi.sharp-stream.com"
+      crossorigin
+    />
+    <link rel="dns-prefetch" href="//listenapi.planetradio.co.uk" />
+    <title>Suomirap Radio — suorana</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Suomirap Radio",
+        "url": "https://suomirap-redirect.vercel.app/",
+        "applicationCategory": "MultimediaApplication",
+        "inLanguage": "fi",
+        "description": "Epävirallinen verkkosoitin Suomirapin kuunteluun.",
+        "about": {
+          "@type": "RadioStation",
+          "name": "Suomirap",
+          "url": "https://www.radioplay.fi/suomirap"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="aurora">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+    <div class="grain"></div>
 
-  <div class="card" id="card">
-    <div class="header">
-      <div class="live-badge"><span class="live-dot"></span>LIVE</div>
-      <div class="bitrate" id="bitrateChips">
-        <button class="bit-chip" data-q="64" title="64 kbps AAC — säästää dataa">64</button><button class="bit-chip" data-q="128" title="128 kbps MP3 — paras laatu">128</button><span class="bit-unit">kbps</span>
+    <main class="card" id="card">
+      <header class="header">
+        <h1 class="brand">SUOMIRAP RADIO</h1>
+        <div class="live-badge">
+          <span class="live-dot" aria-hidden="true"></span
+          ><span id="streamBadge">RADIO</span>
+        </div>
+        <div
+          class="bitrate"
+          id="bitrateChips"
+          role="group"
+          aria-label="Äänenlaatu"
+        >
+          <button
+            class="bit-chip"
+            data-q="64"
+            title="64 kbps AAC — säästää dataa"
+            aria-label="Valitse 64 kilobittiä sekunnissa, AAC"
+            aria-pressed="false"
+          >
+            64</button
+          ><button
+            class="bit-chip"
+            data-q="128"
+            title="128 kbps MP3 — paras laatu"
+            aria-label="Valitse 128 kilobittiä sekunnissa, MP3"
+            aria-pressed="false"
+          >
+            128</button
+          ><span class="bit-unit">kbps</span>
+        </div>
+      </header>
+
+      <div class="np">
+        <div class="record">
+          <img
+            class="np-cover art-ready"
+            id="npCover"
+            alt="Suomirap Radio — kansikuva"
+            src="/cover-fallback.svg"
+          />
+        </div>
+        <div class="np-info">
+          <div class="np-label">NYT SOI</div>
+          <div
+            class="np-track"
+            id="npTrack"
+            title="Haetaan kappaletietoja…"
+            aria-live="polite"
+          >
+            Haetaan kappaletietoja…
+          </div>
+          <div class="np-artist" id="npArtist"></div>
+          <div class="np-fresh" id="npFresh"></div>
+          <div
+            class="metadata-status"
+            id="metadataStatus"
+            role="status"
+            aria-live="polite"
+          ></div>
+          <div
+            class="playback-status"
+            id="playbackStatus"
+            role="status"
+            aria-live="polite"
+          >
+            Valmis aloittamaan.
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="np">
-      <div class="record" aria-hidden="true">
-        <img class="np-cover" id="npCover" alt="" hidden>
-      </div>
-      <div class="np-info">
-        <div class="np-label">NYT SOI</div>
-        <div class="np-track" id="npTrack">Haetaan...</div>
-        <div class="np-artist" id="npArtist"></div>
-        <div class="np-fresh" id="npFresh"></div>
-      </div>
-    </div>
+      <section class="onair" id="onair" hidden aria-label="Ohjelmatiedot">
+        <div class="onair-label">OHJELMA</div>
+        <div class="onair-info">
+          <div class="onair-title" id="onairTitle"></div>
+          <div class="onair-next" id="onairNext"></div>
+        </div>
+      </section>
 
-    <div class="onair" id="onair" hidden>
-      <div class="onair-label">SUORANA</div>
-      <div class="onair-title" id="onairTitle"></div>
-    </div>
-
-    <div class="np-actions" id="npActions" hidden>
-      <a id="lnkSpotify" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
-        Spotify
-      </a>
-      <a id="lnkYoutube" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-        YouTube
-      </a>
-      <a id="lnkApple" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.03 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.702"/></svg>
-        Apple
-      </a>
-    </div>
-
-    <div class="viz-panel">
-      <canvas id="viz"></canvas>
-      <div class="play-wrap">
-        <div class="play-pulse"></div>
-        <div class="play-ring"></div>
-        <button class="play-btn" id="playBtn" aria-label="Toista">
-          <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      <div class="np-actions" id="npActions" hidden>
+        <a id="lnkSpotify" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"
+            />
+          </svg>
+          Spotify
+        </a>
+        <a id="lnkYoutube" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+            />
+          </svg>
+          YouTube
+        </a>
+        <a id="lnkApple" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.03 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.702"
+            />
+          </svg>
+          Apple Music
+        </a>
+        <button class="utility-btn" id="copyTrackBtn" type="button">
+          Kopioi nimi
+        </button>
+        <button class="utility-btn" id="shareTrackBtn" type="button" hidden>
+          Jaa kappale
         </button>
       </div>
-    </div>
 
-    <div class="volume-row">
-      <button class="mute-btn" id="muteBtn" aria-label="Hiljennä">
-        <svg class="icon-vol-high" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-        <svg class="icon-vol-low" viewBox="0 0 24 24" style="display:none"><path d="M5 9v6h4l5 5V4L9 9H5zm11.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-        <svg class="icon-vol-mute" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-      </button>
-      <input type="range" class="volume-slider" id="volume" min="0" max="100" value="80">
-      <span class="vol-value" id="volValue">80%</span>
-    </div>
+      <section
+        class="history"
+        id="historySection"
+        hidden
+        aria-labelledby="historyHeading"
+      >
+        <h2 id="historyHeading">Viimeksi soitettu</h2>
+        <ol class="history-list" id="historyList"></ol>
+      </section>
 
-    <div class="footer">
-      <a href="https://github.com/ZoniBoy00/suomirap-redirect" target="_blank" rel="noopener">GITHUB · ZONIBOY00/SUOMIRAP-REDIRECT</a>
-    </div>
-  </div>
+      <div class="utility-row">
+        <label for="sleepTimer">Uniajastin</label>
+        <select id="sleepTimer" aria-label="Uniajastin">
+          <option value="0">Pois päältä</option>
+          <option value="30">30 minuuttia</option>
+          <option value="60">60 minuuttia</option>
+        </select>
+        <button class="utility-btn" id="airplayBtn" type="button" hidden>
+          AirPlay
+        </button>
+      </div>
 
-  <audio id="player" preload="none" crossorigin="anonymous" src=""></audio>
+      <div class="viz-panel">
+        <canvas id="viz" aria-hidden="true"></canvas>
+        <div class="play-wrap">
+          <div class="play-pulse"></div>
+          <div class="play-ring"></div>
+          <button
+            class="play-btn"
+            id="playBtn"
+            type="button"
+            aria-label="Toista Suomirap-radiota"
+          >
+            <svg class="icon-play" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            <svg class="icon-pause" viewBox="0 0 24 24">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          </button>
+        </div>
+      </div>
 
-<script>
-(() => {
-  'use strict';
+      <div class="volume-row">
+        <button
+          class="mute-btn"
+          id="muteBtn"
+          type="button"
+          aria-label="Mykistä ääni"
+          aria-pressed="false"
+        >
+          <svg class="icon-vol-high" viewBox="0 0 24 24">
+            <path
+              d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
+            />
+          </svg>
+          <svg class="icon-vol-low icon-hidden" viewBox="0 0 24 24">
+            <path
+              d="M5 9v6h4l5 5V4L9 9H5zm11.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"
+            />
+          </svg>
+          <svg class="icon-vol-mute icon-hidden" viewBox="0 0 24 24">
+            <path
+              d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"
+            />
+          </svg>
+        </button>
+        <input
+          type="range"
+          class="volume-slider"
+          id="volume"
+          min="0"
+          max="100"
+          value="80"
+          aria-label="Äänenvoimakkuus"
+          aria-valuetext="80 prosenttia"
+        />
+        <span class="vol-value" id="volValue">80%</span>
+      </div>
 
-  // ---------------------------------------------------------------- DOM refs
-  const $ = id => document.getElementById(id);
-  const player = $('player');
-  const card = $('card');
-  const playBtn = $('playBtn');
-  const volumeSlider = $('volume');
-  const volValue = $('volValue');
-  const muteBtn = $('muteBtn');
-  const iconVolHigh = muteBtn.querySelector('.icon-vol-high');
-  const iconVolLow = muteBtn.querySelector('.icon-vol-low');
-  const iconVolMute = muteBtn.querySelector('.icon-vol-mute');
-  const npTrack = $('npTrack');
-  const npArtist = $('npArtist');
-  const npFresh = $('npFresh');
-  const npCover = $('npCover');
-  const npActions = $('npActions');
-  const onair = $('onair');
-  const onairTitle = $('onairTitle');
-  const bitrateChips = $('bitrateChips');
-  const canvas = $('viz');
-  const ctx = canvas.getContext('2d');
+      <footer class="footer">
+        <a
+          href="https://github.com/ZoniBoy00/suomirap-redirect"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Avoin lähdekoodi · GitHub</a
+        >
+        <div class="footer-legal">
+          Epävirallinen verkkosoitin; ei RadioPlayn tai Bauer Median ylläpitämä.
+          Striimin ja sisällön oikeudet kuuluvat niiden omistajille.
+        </div>
+      </footer>
+    </main>
 
-  let playing = false;
+    <noscript
+      >Soitin tarvitsee JavaScriptin.
+      <a href="https://www.radioplay.fi/suomirap"
+        >Kuuntele Suomirapia RadioPlayn virallisella sivulla.</a
+      ></noscript
+    >
+    <audio id="player" preload="none" crossorigin="anonymous"></audio>
 
-  // ---------------------------------------------------------------- Bitrate
-  let bitrate = parseInt(localStorage.getItem('bitrate'), 10) || 64;
-  if (bitrate !== 64 && bitrate !== 128) bitrate = 64;
-
-  function updateBitrateUI() {
-    bitrateChips.querySelectorAll('.bit-chip').forEach(chip => {
-      chip.classList.toggle('active', parseInt(chip.dataset.q, 10) === bitrate);
-    });
-  }
-  bitrateChips.addEventListener('click', e => {
-    const chip = e.target.closest('.bit-chip');
-    if (!chip) return;
-    const q = parseInt(chip.dataset.q, 10);
-    if (q === bitrate) return;
-    bitrate = q;
-    localStorage.setItem('bitrate', String(bitrate));
-    updateBitrateUI();
-    // Reconnect with the new quality if currently playing
-    if (!player.paused && !userPaused) {
-      activateAudioGraphFromGesture();
-      connectStream().catch(() => {});
-    }
-  });
-  updateBitrateUI();
-
-  // ---------------------------------------------------------------- Volume
-  let lastVolume = 0.8;
-  player.volume = 0.8;
-
-  function updateVolumeUI() {
-    const pct = Math.round(player.volume * 100);
-    volValue.textContent = pct + '%';
-    volumeSlider.value = pct;
-    volumeSlider.style.setProperty('--vol', pct + '%');
-    const muted = player.muted || player.volume === 0;
-    iconVolHigh.style.display = (!muted && player.volume >= 0.5) ? '' : 'none';
-    iconVolLow.style.display = (!muted && player.volume > 0 && player.volume < 0.5) ? '' : 'none';
-    iconVolMute.style.display = muted ? '' : 'none';
-  }
-
-  volumeSlider.addEventListener('input', () => {
-    player.volume = volumeSlider.value / 100;
-    player.muted = false;
-    if (player.volume > 0) lastVolume = player.volume;
-    activateAudioGraphFromGesture();
-    updateVolumeUI();
-  });
-
-  muteBtn.addEventListener('click', () => {
-    player.muted = !player.muted;
-    if (!player.muted && player.volume === 0) player.volume = lastVolume || 0.8;
-    activateAudioGraphFromGesture();
-    updateVolumeUI();
-  });
-
-  // ---------------------------------------------------------------- Playback
-  function setPlaying(on) {
-    playing = on;
-    card.classList.toggle('playing', on);
-    if (on) startDrawLoop(); else if (!autoRetry) stopDrawLoop();
-  }
-
-  playBtn.addEventListener('click', () => {
-    if (player.paused || player.muted) {
-      userPaused = false;
-      activateAudioGraphFromGesture();
-      player.muted = false;
-      updateVolumeUI();
-      const tapBanner = $('tapBanner');
-      if (tapBanner) tapBanner.remove();
-      if (player.paused) connectStream().catch(() => {});
-    } else {
-      userPaused = true;
-      autoRetry = false;
-      player.pause();
-      player.removeAttribute('src');
-      player.load();
-      setPlaying(false);
-    }
-  });
-
-  let audioCtx = null, analyser = null, freqData = null, mediaSrcFailed = false;
-
-  function connectStream() {
-    userPaused = false;
-    player.src = '/api/suomirap?q=' + bitrate + '&t=' + Date.now(); // fresh redirect + chosen quality
-    return player.play().catch(error => {
-      // Replacing the stream can abort an earlier, still-pending play() request.
-      if (error.name !== 'AbortError') throw error;
-    });
-  }
-
-  player.addEventListener('playing', () => setPlaying(true));
-  player.addEventListener('error', () => {
-    setPlaying(false);
-    scheduleReconnect();
-  });
-
-  /* ---------- 24/7 autoplay + auto-reconnect ---------- */
-  let userPaused = false;   // user pressed pause -> don't fight them
-  let autoRetry = false;    // reconnect loop active
-  let retryDelay = 1000;
-
-  function scheduleReconnect() {
-    if (userPaused || autoRetry) return;
-    autoRetry = true;
-    retryDelay = 1000;
-    reconnectLoop();
-  }
-
-  function reconnectLoop() {
-    if (userPaused) { autoRetry = false; return; }
-    connectStream().then(() => {
-      autoRetry = false;
-    }).catch(() => {
-      // Autoplay blocked or network down -> backoff and try again
-      retryDelay = Math.min(retryDelay * 2, 10000);
-      setTimeout(reconnectLoop, retryDelay);
-    });
-  }
-
-  // Watchdog: if the audio freezes (stall without error), force reconnect
-  let lastTime = 0;
-  setInterval(() => {
-    if (!playing || userPaused) return;
-    if (player.currentTime === lastTime) {
-      player.src = '/api/suomirap?q=' + bitrate + '&t=' + Date.now();
-      player.play().catch(() => {});
-    }
-    lastTime = player.currentTime;
-  }, 5000);
-
-  // Autoplay on page load: try with sound first. If the browser blocks it,
-  // start muted (always allowed) and unmute on the first user interaction.
-  function attemptAutoplay() {
-    connectStream().then(() => {
-      // Full sound autoplay allowed (e.g. installed PWA / high engagement)
-    }).catch(() => {
-      player.muted = true;
-      player.src = '/api/suomirap?q=' + bitrate + '&t=' + Date.now();
-      player.play().then(() => {
-        showUnmuteBanner();
-      }).catch(() => {
-        // Even muted autoplay blocked -> fall back to reconnect loop
-        scheduleReconnect();
-      });
-    });
-  }
-
-  function showUnmuteBanner() {
-    if (document.getElementById('tapBanner')) return;
-    const b = document.createElement('div');
-    b.id = 'tapBanner';
-    b.textContent = 'Selain esti äänen — napauta missä vain kuunnellaksesi';
-    b.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);' +
-      'background:rgba(20,16,40,.9);border:1px solid rgba(255,255,255,.18);color:#fff;' +
-      'font:600 13px system-ui;padding:12px 20px;border-radius:999px;z-index:99;' +
-      'backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.5);white-space:nowrap;';
-    document.body.appendChild(b);
-    const unmute = () => {
-      player.muted = false;
-      activateAudioGraphFromGesture();
-      updateVolumeUI();
-      b.remove();
-      document.removeEventListener('click', unmute);
-      document.removeEventListener('keydown', unmute);
-      document.removeEventListener('touchstart', unmute);
-    };
-    document.addEventListener('click', unmute);
-    document.addEventListener('keydown', unmute);
-    document.addEventListener('touchstart', unmute);
-  }
-
-  attemptAutoplay();
-
-  function initAudioGraph() {
-    if (audioCtx || mediaSrcFailed) return;
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const src = audioCtx.createMediaElementSource(player);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.8;
-      src.connect(analyser);
-      analyser.connect(audioCtx.destination);
-      freqData = new Uint8Array(analyser.frequencyBinCount);
-    } catch (e) {
-      mediaSrcFailed = true;
-    }
-  }
-
-  function activateAudioGraphFromGesture() {
-    initAudioGraph();
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-  }
-
-  // ---------------------------------------------------------------- Visualizer
-  let fallbackPhase = 0;
-  let rafId = null;
-  const BAR_COUNT = 40;
-
-  function readSpectrum(bars) {
-    analyser.getByteFrequencyData(freqData);
-    let max = 0;
-    for (let i = 0; i < freqData.length; i++) if (freqData[i] > max) max = freqData[i];
-    if (max === 0) return false;
-
-    const usable = Math.floor(freqData.length * 0.75);
-    for (let i = 0; i < BAR_COUNT; i++) {
-      const lo = Math.floor(Math.pow(i / BAR_COUNT, 1.6) * usable);
-      const hi = Math.max(lo + 1, Math.floor(Math.pow((i + 1) / BAR_COUNT, 1.6) * usable));
-      let sum = 0;
-      for (let j = lo; j < hi; j++) sum += freqData[j];
-      bars[i] = sum / (hi - lo) / 255;
-    }
-    return true;
-  }
-
-  function readFallback(bars) {
-    fallbackPhase += 0.05;
-    for (let i = 0; i < BAR_COUNT; i++) {
-      bars[i] = 0.25 + 0.2 * Math.abs(Math.sin(fallbackPhase + i * 0.4));
-    }
-  }
-
-  function resizeCanvas() {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = canvas.clientWidth * dpr;
-    canvas.height = canvas.clientHeight * dpr;
-  }
-
-  function draw() {
-    rafId = requestAnimationFrame(draw);
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-
-    const bars = new Array(BAR_COUNT).fill(0);
-    const real = (analyser && freqData) ? readSpectrum(bars) : false;
-    if (!real) readFallback(bars);
-
-    let energy = 0;
-    for (const v of bars) energy += v;
-    energy /= BAR_COUNT;
-
-    const gap = 3 * dpr;
-    const barW = (w - gap * (BAR_COUNT - 1)) / BAR_COUNT;
-    for (let i = 0; i < BAR_COUNT; i++) {
-      const v = Math.min(1, bars[i] * 1.3);
-      const barH = Math.max(3 * dpr, v * h);
-      const x = i * (barW + gap);
-      const grad = ctx.createLinearGradient(0, h - barH, 0, h);
-      grad.addColorStop(0, `hsl(${72 + energy * 12}, 78%, ${62 + v * 14}%)`);
-      grad.addColorStop(1, 'rgba(215, 243, 106, 0.22)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      const r = Math.min(barW / 2, 3 * dpr);
-      ctx.roundRect ? ctx.roundRect(x, h - barH, barW, barH, [r, r, 0, 0]) : ctx.rect(x, h - barH, barW, barH);
-      ctx.fill();
-    }
-  }
-
-  function startDrawLoop() {
-    if (rafId === null) {
-      resizeCanvas();
-      rafId = requestAnimationFrame(draw);
-    }
-  }
-  function stopDrawLoop() {
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-  }
-  window.addEventListener('resize', () => { if (rafId !== null) resizeCanvas(); });
-
-  // ---------------------------------------------------------------- Now playing
-  async function fetchNowPlaying() {
-    try {
-      const r = await fetch('/api/nowplaying', { cache: 'no-store' });
-      if (!r.ok) throw new Error(r.status);
-      const d = await r.json();
-      if (!d.track && !d.artist) return;
-      npTrack.textContent = d.track || 'Tuntematon kappale';
-      npArtist.textContent = d.artist || '';
-      if (d.image) { npCover.src = d.image; npCover.hidden = false; }
-      const q = encodeURIComponent((d.artist ? d.artist + ' ' : '') + (d.track || ''));
-      $('lnkSpotify').href = 'https://open.spotify.com/search/' + q;
-      $('lnkYoutube').href = 'https://www.youtube.com/results?search_query=' + q;
-      $('lnkApple').href = d.appleMusic || ('https://music.apple.com/fi/search?term=' + q);
-      npActions.hidden = false;
-      // On-air show info
-      if (d.show && d.show.title) {
-        onairTitle.textContent = d.show.title;
-        onair.hidden = false;
-      } else {
-        onair.hidden = true;
-      }
-    } catch (e) {
-      npTrack.textContent = 'Kappaletietoa ei saatavilla';
-      npArtist.textContent = '';
-    }
-  }
-  fetchNowPlaying();
-  setInterval(fetchNowPlaying, 30000);
-})();
-</script>
-</body>
+    <script src="/player.js" defer></script>
+  </body>
 </html>

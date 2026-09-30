@@ -1,0 +1,61 @@
+import assert from "node:assert/strict";
+import { readFile, access } from "node:fs/promises";
+import { Script } from "node:vm";
+
+const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+const html = await read("public/index.html");
+assert.equal(
+  html.charCodeAt(0),
+  "<".charCodeAt(0),
+  "HTML must be UTF-8 without a BOM",
+);
+assert.match(html, /<html lang="fi">/);
+assert.match(html, /<main\b/);
+assert.match(html, /<h1\b/);
+assert.match(html, /<noscript\b/);
+assert.match(html, /property="og:title"/);
+assert.match(html, /property="og:image"/);
+assert.match(html, /name="twitter:card"/);
+assert.match(html, /rel="canonical"/);
+assert.match(html, /rel="icon"/);
+assert.doesNotMatch(html, /rel="manifest"|apple-touch-icon/);
+assert.doesNotMatch(
+  html,
+  /<audio[^>]+\ssrc=["']["']/i,
+  "audio element must not use an empty src",
+);
+assert.match(html, /<script src="\/player\.js" defer><\/script>/);
+assert.match(html, /<link rel="stylesheet" href="\/styles\.css"\s*\/?\s*>/);
+
+const playerJs = await read("public/player.js");
+new Script(playerJs, { filename: "public/player.js" });
+
+const vercel = JSON.parse(await read("vercel.json"));
+const headers = vercel.headers?.flatMap((rule) => rule.headers || []) || [];
+for (const name of [
+  "Content-Security-Policy",
+  "X-Content-Type-Options",
+  "Referrer-Policy",
+  "Permissions-Policy",
+]) {
+  assert.ok(
+    headers.some((header) => header.key === name),
+    `Missing ${name} security header`,
+  );
+}
+
+for (const path of [
+  "public/styles.css",
+  "public/player.js",
+  "public/favicon.svg",
+  "public/cover-fallback.svg",
+  "public/og-image.png",
+  "public/screenshot.png",
+  "public/robots.txt",
+  "public/sitemap.xml",
+])
+  await access(new URL(`../${path}`, import.meta.url));
+
+console.log(
+  "Project checks passed: HTML shell, player JavaScript, security headers, and public assets.",
+);

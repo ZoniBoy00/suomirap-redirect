@@ -1,1 +1,17 @@
-{"name":"suomirap-radio"}
+{
+  "name": "suomirap-radio",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "test": "node --test",
+    "format": "prettier --write \"api/*.js\" \"public/index.html\" \"public/styles.css\" \"public/player.js\" \"scripts/*.mjs\" \"tests/**/*.{js,json,html}\" \".github/workflows/*.yml\" README.md package.json package-lock.json vercel.json",
+    "format:check": "prettier --check \"api/*.js\" \"public/index.html\" \"public/styles.css\" \"public/player.js\" \"scripts/*.mjs\" \"tests/**/*.{js,json,html}\" \".github/workflows/*.yml\" README.md package.json package-lock.json vercel.json",
+    "check": "node scripts/check-project.mjs && node --check api/nowplaying.js && node --check api/suomirap.js && node --check api/health.js && npm run format:check"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9"
+  }
+}

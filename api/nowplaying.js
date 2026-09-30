@@ -1,154 +1,342 @@
-// Returns current "now playing" metadata + on-air show for Suomirap.
-//
-// Track: Bauer's public Listen API (same source as the mobile apps) is near
-// real-time. The endpoint is /events/{stationCode}/{time}/{limit} where
-// {time} must be an explicit Finnish local timestamp ("YYYY-MM-DD HH:MM:SS")
-// — the special value "now" resolves to the server's timezone which is ~2h
-// behind Finland. Events come back in inconsistent order, so we sort by
-// timestamp and take the newest.
-//
-// Show: the station page server-side renders today's schedule
-// ("schedule":{"data":{"YYYY-MM-DD":[{start,title,duration,...}]}}). We find
-// the episode whose time window covers "now" and report it as on-air.
-//
-// Fallback for the track: the same page also embeds nowPlaying* fields.
+// Returns current track metadata and on-air show information for Suomirap.
 
 const API_URL = "https://listenapi.planetradio.co.uk/api9.2/events";
 const STATION_CODE = "rrf";
 const PAGE_URL = "https://www.radioplay.fi/suomirap";
+const UPSTREAM_TIMEOUT_MS = 4000;
+const SCHEDULE_TTL_MS = 5 * 60 * 1000;
+const SCHEDULE_STALE_LIMIT_MS = 60 * 60 * 1000;
+const TRACK_STALE_LIMIT_MS = 30 * 60 * 1000;
 
-// Current Finnish local time as "YYYY-MM-DD HH:MM:SS"
-function finnishNow() {
-  const fmt = new Intl.DateTimeFormat("fi-FI", {
+let pageCache = { html: "", fetchedAt: 0 };
+let lastGoodTrack = null;
+
+export function finnishNow(date = new Date()) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("fi-FI", {
+      timeZone: "Europe/Helsinki",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+}
+
+export function finnishDateKey(date = new Date()) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("fi-FI", {
+      timeZone: "Europe/Helsinki",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+export function offsetDate(dateStr, days) {
+  const date = new Date(`${dateStr}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function parseFinnishLocalDateTime(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(
+    String(value || ""),
+  );
+  if (!match) return "";
+  const [, year, month, day, hour, minute, second] = match;
+  const [y, mo, d, h, mi, s] = [+year, +month, +day, +hour, +minute, +second];
+  if (
+    y < 1000 ||
+    mo < 1 ||
+    mo > 12 ||
+    d < 1 ||
+    d > 31 ||
+    h > 23 ||
+    mi > 59 ||
+    s > 59
+  )
+    return "";
+  const dateCheck = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
+  if (
+    dateCheck.getUTCFullYear() !== y ||
+    dateCheck.getUTCMonth() !== mo - 1 ||
+    dateCheck.getUTCDate() !== d
+  )
+    return "";
+  const wanted = Date.UTC(y, mo - 1, d, h, mi, s);
+  let timestamp = wanted;
+  const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Helsinki",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
   });
-  const parts = {};
-  for (const p of fmt.formatToParts(new Date())) parts[p.type] = p.value;
-  const hour = parts.hour === "24" ? "00" : parts.hour; // fi-FI quirk
-  return `${parts.year}-${parts.month}-${parts.day} ${hour}:${parts.minute}:${parts.second}`;
-}
-
-// Finnish "now" as a Date and its date key "YYYY-MM-DD" (schedule lookup)
-function finnishDateParts() {
-  const nowStr = finnishNow(); // "YYYY-MM-DD HH:MM:SS"
-  const [date, time] = nowStr.split(" ");
-  // Page schedule timestamps carry +03:00; parse our string in the same zone
-  const asDate = new Date(`${date}T${time}+03:00`);
-  return { date, asDate, nowStr };
-}
-
-function pick(html, key) {
-  const m = html.match(new RegExp('"' + key + '"\\s*:\\s*"([^"]*)"'));
-  return m ? m[1] : "";
-}
-
-// Extract the balanced "schedule":{"data":{...}} object from the HTML and
-// return the episode covering "now", or null.
-function currentShow(html, date, asDate) {
-  const key = '"schedule":{"data":';
-  const i = html.indexOf(key);
-  if (i < 0) return null;
-  // Walk to the matching closing brace of the schedule object
-  let depth = 0, end = -1;
-  for (let j = i + '"schedule":'.length; j < html.length; j++) {
-    if (html[j] === "{") depth++;
-    else if (html[j] === "}") { depth--; if (depth === 0) { end = j + 1; break; } }
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const parts = Object.fromEntries(
+      formatter
+        .formatToParts(new Date(timestamp))
+        .map((part) => [part.type, part.value]),
+    );
+    const observed = Date.UTC(
+      +parts.year,
+      +parts.month - 1,
+      +parts.day,
+      +parts.hour,
+      +parts.minute,
+      +parts.second,
+    );
+    const adjustment = wanted - observed;
+    timestamp += adjustment;
+    if (adjustment === 0) break;
   }
-  if (end < 0) return null;
+  const result = new Date(timestamp);
+  return Number.isNaN(result.getTime()) ? "" : result.toISOString();
+}
+
+export function safeHttpsUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return "";
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol !== "https:" ||
+      !url.hostname ||
+      url.username ||
+      url.password
+    )
+      return "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+export function pick(html, key) {
+  const escapedKey = String(key).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = String(html).match(
+    new RegExp('"' + escapedKey + '"\\s*:\\s*("(?:[^"\\\\]|\\\\.)*")'),
+  );
+  if (!match) return "";
+  try {
+    const value = JSON.parse(match[1]);
+    return typeof value === "string" ? value : "";
+  } catch {
+    return "";
+  }
+}
+
+function extractJsonObject(html, start) {
+  if (html[start] !== "{") return "";
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < html.length; i++) {
+    const char = html[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === "{") depth++;
+    else if (char === "}" && --depth === 0) return html.slice(start, i + 1);
+  }
+  return "";
+}
+
+export function currentShow(html, date, now = new Date()) {
+  const match = /"schedule"\s*:\s*\{\s*"data"\s*:\s*\{/.exec(String(html));
+  if (!match) return null;
+  const dataStart = match.index + match[0].length - 1;
   let data;
   try {
-    data = JSON.parse(html.slice(i + '"schedule":'.length, end)).data;
-  } catch (e) {
+    data = JSON.parse(extractJsonObject(String(html), dataStart));
+  } catch {
     return null;
   }
-  // Check today and yesterday (covers shows spanning midnight)
-  for (const day of [date, offsetDate(date, -1)]) {
+  if (!data || typeof data !== "object") return null;
+  let current = null;
+  const upcoming = [];
+  const days = [date, offsetDate(date, -1), offsetDate(date, 1)];
+  for (const day of days) {
     const episodes = data[day];
     if (!Array.isArray(episodes)) continue;
-    for (const ep of episodes) {
-      const start = new Date(ep.start);
-      const endT = new Date(start.getTime() + (ep.duration || 0) * 1000);
-      if (asDate >= start && asDate < endT) {
-        return { title: ep.title || "", image: ep.image_url || "", until: endT.toISOString() };
-      }
+    for (const episode of episodes) {
+      const start = new Date(episode.start);
+      const duration = Number(episode.duration) || 0;
+      if (Number.isNaN(start.getTime()) || duration <= 0) continue;
+      const end = new Date(start.getTime() + duration * 1000);
+      const entry = {
+        title: typeof episode.title === "string" ? episode.title : "",
+        image: safeHttpsUrl(episode.image_url),
+        startedAt: start.toISOString(),
+        until: end.toISOString(),
+      };
+      if (now >= start && now < end) current = entry;
+      else if (start > now && entry.title) upcoming.push(entry);
     }
   }
-  return null;
-}
-
-function offsetDate(dateStr, days) {
-  const d = new Date(dateStr + "T00:00:00+03:00");
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
+  upcoming.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  const next = upcoming[0] || null;
+  if (current) return { ...current, next };
+  return next ? { title: "", image: "", startedAt: "", until: "", next } : null;
 }
 
 async function fetchPage() {
-  const r = await fetch(PAGE_URL, {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; suomirap-player/1.0)" },
-    cache: "no-store",
+  const now = Date.now();
+  if (pageCache.html && now - pageCache.fetchedAt < SCHEDULE_TTL_MS)
+    return pageCache.html;
+  try {
+    const response = await fetch(PAGE_URL, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; suomirap-player/1.0)",
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error("page " + response.status);
+    const html = await response.text();
+    if (!html || html.length > 2_000_000)
+      throw new Error("invalid station page size");
+    pageCache = { html, fetchedAt: Date.now() };
+    return html;
+  } catch (error) {
+    if (pageCache.html && now - pageCache.fetchedAt < SCHEDULE_STALE_LIMIT_MS)
+      return pageCache.html;
+    throw error;
+  }
+}
+
+export function parseListenEvents(events) {
+  if (!Array.isArray(events))
+    throw new Error("Listen API returned an invalid event list");
+  const validEvents = events.filter((event) => {
+    if (!event || typeof event !== "object" || Array.isArray(event))
+      return false;
+    if (
+      !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(
+        String(event.nowPlayingTime || ""),
+      )
+    )
+      return false;
+    if (
+      event.nowPlayingTrack != null &&
+      typeof event.nowPlayingTrack !== "string"
+    )
+      return false;
+    if (
+      event.nowPlayingArtist != null &&
+      typeof event.nowPlayingArtist !== "string"
+    )
+      return false;
+    return Boolean(
+      parseFinnishLocalDateTime(event.nowPlayingTime) &&
+      (event.nowPlayingTrack || event.nowPlayingArtist),
+    );
   });
-  if (!r.ok) throw new Error("page " + r.status);
-  return r.text();
+  if (validEvents.length === 0)
+    throw new Error("Listen API returned no valid track event");
+  const event = [...validEvents]
+    .sort((a, b) => a.nowPlayingTime.localeCompare(b.nowPlayingTime))
+    .at(-1);
+  const trackStartedAt = parseFinnishLocalDateTime(event.nowPlayingTime);
+  if (!trackStartedAt || (!event.nowPlayingTrack && !event.nowPlayingArtist)) {
+    throw new Error("Listen API returned no valid track event");
+  }
+  return {
+    track: event.nowPlayingTrack || "",
+    artist: event.nowPlayingArtist || "",
+    image: safeHttpsUrl(event.nowPlayingSmallImage || event.nowPlayingImage),
+    appleMusic: safeHttpsUrl(event.nowPlayingAppleMusicUrl),
+    trackStartedAt,
+    trackDuration:
+      Number(event.nowPlayingDuration) > 0
+        ? Number(event.nowPlayingDuration)
+        : null,
+  };
 }
 
 async function fromListenApi() {
   const time = finnishNow();
   const url = `${API_URL}/${encodeURIComponent(STATION_CODE)}/${encodeURIComponent(time)}/5`;
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error("listenapi " + r.status);
-  const events = await r.json();
-  if (!Array.isArray(events) || events.length === 0) throw new Error("empty events");
-  // The API returns events in inconsistent order -> sort by timestamp.
-  // Timestamps are "YYYY-MM-DD HH:MM:SS" -> lexicographic sort works.
-  const sorted = [...events].sort((a, b) =>
-    String(a.nowPlayingTime).localeCompare(String(b.nowPlayingTime))
-  );
-  const e = sorted[sorted.length - 1]; // newest
-  if (!e.nowPlayingTrack && !e.nowPlayingArtist) throw new Error("no track in event");
-  return {
-    track: e.nowPlayingTrack || "",
-    artist: e.nowPlayingArtist || "",
-    image: e.nowPlayingSmallImage || e.nowPlayingImage || "",
-    appleMusic: e.nowPlayingAppleMusicUrl || "",
-  };
+  const response = await fetch(url, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new Error("listenapi " + response.status);
+  return parseListenEvents(await response.json());
 }
 
-function trackFromPage(html) {
+export function trackFromPage(html) {
+  const track = pick(html, "nowPlayingTrack");
+  const artist = pick(html, "nowPlayingArtist");
+  if (!track && !artist) return null;
   return {
-    track: pick(html, "nowPlayingTrack"),
-    artist: pick(html, "nowPlayingArtist"),
-    image: pick(html, "nowPlayingSmallImage") || pick(html, "nowPlayingImage"),
-    appleMusic: pick(html, "nowPlayingAppleMusicUrl"),
+    track,
+    artist,
+    image: safeHttpsUrl(
+      pick(html, "nowPlayingSmallImage") || pick(html, "nowPlayingImage"),
+    ),
+    appleMusic: safeHttpsUrl(pick(html, "nowPlayingAppleMusicUrl")),
+    trackStartedAt: "",
+    trackDuration: null,
   };
 }
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=15, stale-while-revalidate=30");
-  const { date, asDate } = finnishDateParts();
+  res.setHeader(
+    "Cache-Control",
+    "s-maxage=15, stale-while-revalidate=15, stale-if-error=300",
+  );
+  const now = new Date();
+  const date = finnishDateKey(now);
 
   const [apiResult, pageResult] = await Promise.allSettled([
     fromListenApi(),
     fetchPage(),
   ]);
+  let trackData = apiResult.status === "fulfilled" ? apiResult.value : null;
+  let source = trackData ? "listenapi" : "page";
+  let show =
+    pageResult.status === "fulfilled"
+      ? currentShow(pageResult.value, date, now)
+      : null;
 
-  // Track: prefer the (fresher) Listen API, fall back to the page
-  let trackData = null;
-  if (apiResult.status === "fulfilled") trackData = apiResult.value;
-  else if (pageResult.status === "fulfilled") trackData = trackFromPage(pageResult.value);
-
-  // Show: always from the page's embedded schedule
-  let show = null;
-  if (pageResult.status === "fulfilled") {
-    show = currentShow(pageResult.value, date, asDate);
+  if (!trackData && pageResult.status === "fulfilled")
+    trackData = trackFromPage(pageResult.value);
+  if (trackData) lastGoodTrack = { data: trackData, savedAt: Date.now() };
+  let stale = false;
+  if (
+    !trackData &&
+    lastGoodTrack &&
+    Date.now() - lastGoodTrack.savedAt < TRACK_STALE_LIMIT_MS
+  ) {
+    trackData = lastGoodTrack.data;
+    source = "stale";
+    stale = true;
   }
 
   if (!trackData) {
+    res.setHeader("Cache-Control", "no-store");
     res.status(502).json({ error: "now-playing unavailable" });
     return;
   }
-  res.status(200).json({ ...trackData, source: apiResult.status === "fulfilled" ? "listenapi" : "page", show });
+  res.status(200).json({ ...trackData, source, stale, show });
 }
