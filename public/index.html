@@ -19,7 +19,6 @@
     position: relative;
   }
 
-  /* Ambient background blobs */
   .blob {
     position: fixed;
     border-radius: 50%;
@@ -48,8 +47,7 @@
     box-shadow: 0 25px 70px rgba(0, 0, 0, 0.55);
   }
 
-  /* Header */
-  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
   .live-badge {
     display: flex; align-items: center; gap: 7px;
     background: rgba(255, 59, 92, 0.14);
@@ -62,56 +60,54 @@
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
   .bitrate { color: rgba(255, 255, 255, 0.35); font-size: 11px; letter-spacing: 1px; }
 
-  /* Artwork */
-  .artwork {
-    width: 150px; height: 150px; margin: 0 auto 24px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #7b2ff7, #f72585);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 60px;
-    box-shadow: 0 12px 40px rgba(123, 47, 247, 0.45);
-    position: relative;
-    transition: transform 0.4s ease;
+  /* Now playing */
+  .np {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    min-height: 74px;
   }
-  .playing .artwork { animation: spin 12s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .artwork::after {
-    content: '';
-    position: absolute;
-    width: 26px; height: 26px;
-    background: #0a0818;
-    border-radius: 50%;
+  .np-cover {
+    width: 50px; height: 50px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.08);
+    flex-shrink: 0;
+    object-fit: cover;
+  }
+  .np-info { flex: 1; min-width: 0; }
+  .np-label { font-size: 10px; letter-spacing: 2px; color: #ff6b81; font-weight: 700; margin-bottom: 3px; }
+  .np-track { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-artist { font-size: 13px; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-loading { color: rgba(255,255,255,0.4); font-size: 13px; }
+
+  /* Search links */
+  .np-actions { display: flex; gap: 8px; margin: -10px 0 20px; }
+  .np-actions a {
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 9px 0;
+    border-radius: 12px;
+    transition: background 0.2s, color 0.2s;
+  }
+  .np-actions a:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+  /* Visualizer */
+  canvas#viz {
+    width: 100%;
+    height: 56px;
+    display: block;
+    margin-bottom: 22px;
   }
 
-  /* Title */
-  .meta { text-align: center; margin-bottom: 24px; }
-  .meta h1 { font-size: 26px; font-weight: 800; letter-spacing: 0.5px; }
-  .meta .sub { color: rgba(255, 255, 255, 0.5); font-size: 13px; margin-top: 4px; min-height: 17px; }
-
-  /* Equalizer */
-  .eq {
-    display: flex; align-items: flex-end; justify-content: center;
-    gap: 4px; height: 30px; margin-bottom: 22px;
-  }
-  .eq span {
-    width: 5px; border-radius: 3px;
-    background: linear-gradient(to top, #7b2ff7, #f72585);
-    height: 4px;
-  }
-  .playing .eq span { animation: bounce 1s ease-in-out infinite; }
-  .eq span:nth-child(1) { animation-delay: 0s; }
-  .eq span:nth-child(2) { animation-delay: 0.15s; }
-  .eq span:nth-child(3) { animation-delay: 0.3s; }
-  .eq span:nth-child(4) { animation-delay: 0.45s; }
-  .eq span:nth-child(5) { animation-delay: 0.6s; }
-  .eq span:nth-child(6) { animation-delay: 0.35s; }
-  .eq span:nth-child(7) { animation-delay: 0.1s; }
-  @keyframes bounce {
-    0%, 100% { height: 5px; }
-    50% { height: 28px; }
-  }
-
-  /* Play button */
   .play-btn {
     display: flex; align-items: center; justify-content: center;
     width: 78px; height: 78px;
@@ -126,7 +122,6 @@
   .play-btn:hover { transform: scale(1.06); box-shadow: 0 14px 45px rgba(247, 37, 133, 0.65); }
   .play-btn:active { transform: scale(0.96); }
 
-  /* Volume row */
   .volume-row {
     display: flex; align-items: center; gap: 12px;
     margin-bottom: 22px;
@@ -179,8 +174,6 @@
   }
   .footer a { color: rgba(255,255,255,0.3); font-size: 11px; text-decoration: none; letter-spacing: 0.5px; }
   .footer a:hover { color: rgba(255,255,255,0.6); }
-
-  .hidden { display: none; }
 </style>
 </head>
 <body>
@@ -191,19 +184,25 @@
   <div class="card" id="card">
     <div class="header">
       <div class="live-badge"><span class="live-dot"></span>LIVE</div>
-      <div class="bitrate">64 kbps · AAC</div>
+      <div class="bitrate">128 kbps · MP3</div>
     </div>
 
-    <div class="artwork">🎤</div>
-
-    <div class="meta">
-      <h1>Suomirap</h1>
-      <div class="sub" id="status">Valmiina toistoon</div>
+    <div class="np" id="np">
+      <img class="np-cover" id="npCover" alt="" hidden>
+      <div class="np-info">
+        <div class="np-label">NYT SOI</div>
+        <div class="np-track" id="npTrack">Haetaan...</div>
+        <div class="np-artist" id="npArtist"></div>
+      </div>
     </div>
 
-    <div class="eq" id="eq">
-      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    <div class="np-actions" id="npActions" hidden>
+      <a id="lnkSpotify" target="_blank" rel="noopener">🎵 Spotify</a>
+      <a id="lnkYoutube" target="_blank" rel="noopener">▶ YouTube</a>
+      <a id="lnkApple" target="_blank" rel="noopener">🍎 Apple</a>
     </div>
+
+    <canvas id="viz"></canvas>
 
     <button class="play-btn" id="playBtn" aria-label="Toista">▶</button>
 
@@ -218,17 +217,22 @@
     </div>
   </div>
 
-  <audio id="player" preload="none" src="/api/suomirap"></audio>
+  <audio id="player" preload="none" crossorigin="anonymous" src=""></audio>
 
 <script>
   const player = document.getElementById('player');
-  const card = document.getElementById('card');
   const playBtn = document.getElementById('playBtn');
-  const status = document.getElementById('status');
   const volume = document.getElementById('volume');
   const volValue = document.getElementById('volValue');
   const muteBtn = document.getElementById('muteBtn');
+  const npTrack = document.getElementById('npTrack');
+  const npArtist = document.getElementById('npArtist');
+  const npCover = document.getElementById('npCover');
+  const npActions = document.getElementById('npActions');
+  const canvas = document.getElementById('viz');
+  const ctx = canvas.getContext('2d');
 
+  /* ---------- Volume ---------- */
   let lastVolume = 0.8;
   player.volume = 0.8;
   updateVolumeUI();
@@ -242,37 +246,6 @@
       : player.volume < 0.5 ? '🔉' : '🔊';
   }
 
-  function setPlaying(on) {
-    card.classList.toggle('playing', on);
-    playBtn.textContent = on ? '⏸' : '▶';
-  }
-
-  playBtn.addEventListener('click', () => {
-    if (player.paused) {
-      status.textContent = 'Yhdistetään...';
-      // Always fetch with fresh skey — reset the source
-      player.src = '/api/suomirap?t=' + Date.now();
-      player.play().catch(() => {
-        status.textContent = 'Yhdistäminen epäonnistui';
-      });
-    } else {
-      player.pause();
-      player.src = '';
-      setPlaying(false);
-      status.textContent = 'Pysäytetty';
-    }
-  });
-
-  player.addEventListener('playing', () => {
-    setPlaying(true);
-    status.textContent = 'Suora lähetys käynnissä';
-  });
-  player.addEventListener('waiting', () => { status.textContent = 'Puskuroi...'; });
-  player.addEventListener('error', () => {
-    setPlaying(false);
-    status.textContent = 'Yhteys katkesi — paina play uudelleen';
-  });
-
   volume.addEventListener('input', () => {
     player.volume = volume.value / 100;
     player.muted = false;
@@ -282,11 +255,134 @@
 
   muteBtn.addEventListener('click', () => {
     player.muted = !player.muted;
-    if (!player.muted && player.volume === 0) {
-      player.volume = lastVolume || 0.8;
-    }
+    if (!player.muted && player.volume === 0) player.volume = lastVolume || 0.8;
     updateVolumeUI();
   });
+
+  /* ---------- Play / pause ---------- */
+  let playing = false;
+  playBtn.addEventListener('click', () => {
+    if (player.paused) {
+      // Always fetch with fresh redirect
+      player.src = '/api/suomirap?t=' + Date.now();
+      player.play().catch(() => {});
+    } else {
+      player.pause();
+      player.removeAttribute('src');
+      player.load();
+      setPlaying(false);
+    }
+  });
+
+  function setPlaying(on) {
+    playing = on;
+    playBtn.textContent = on ? '⏸' : '▶';
+  }
+
+  player.addEventListener('error', () => setPlaying(false));
+
+  /* ---------- Audio-reactive visualizer ---------- */
+  let audioCtx = null, analyser = null, dataArray = null;
+  let fallbackPhase = 0;
+
+  function ensureAnalyser() {
+    if (audioCtx) return;
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = audioCtx.createMediaElementSource(player);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+      src.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+    } catch (e) {
+      analyser = null; // fall back to decorative animation
+    }
+  }
+
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  const BAR_COUNT = 40;
+
+  function draw() {
+    requestAnimationFrame(draw);
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const bars = new Array(BAR_COUNT).fill(0);
+    let energy = 0;
+
+    if (analyser && playing && dataArray) {
+      analyser.getByteFrequencyData(dataArray);
+      const usable = Math.floor(dataArray.length * 0.75);
+      for (let i = 0; i < BAR_COUNT; i++) {
+        // Logarithmic-ish bin mapping so bass doesn't dominate everything
+        const start = Math.floor(Math.pow(i / BAR_COUNT, 1.6) * usable);
+        const end = Math.max(start + 1, Math.floor(Math.pow((i + 1) / BAR_COUNT, 1.6) * usable));
+        let sum = 0;
+        for (let j = start; j < end; j++) sum += dataArray[j];
+        bars[i] = sum / (end - start) / 255;
+      }
+      for (const v of bars) energy += v;
+      energy /= BAR_COUNT;
+    } else if (playing) {
+      // Decorative fallback if analyser unavailable
+      fallbackPhase += 0.05;
+      for (let i = 0; i < BAR_COUNT; i++) {
+        bars[i] = 0.25 + 0.2 * Math.abs(Math.sin(fallbackPhase + i * 0.4));
+      }
+      energy = 0.3;
+    }
+
+    const gap = 3 * (window.devicePixelRatio || 1);
+    const barW = (w - gap * (BAR_COUNT - 1)) / BAR_COUNT;
+    for (let i = 0; i < BAR_COUNT; i++) {
+      const v = Math.min(1, bars[i] * 1.3);
+      const barH = Math.max(3 * (window.devicePixelRatio || 1), v * h);
+      const x = i * (barW + gap);
+      const y = h - barH;
+      const grad = ctx.createLinearGradient(0, y, 0, h);
+      grad.addColorStop(0, `hsl(${280 + energy * 60}, 90%, ${65 + v * 15}%)`);
+      grad.addColorStop(1, 'rgba(123, 47, 247, 0.35)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      // Rounded top bars
+      const r = Math.min(barW / 2, 3 * (window.devicePixelRatio || 1));
+      ctx.roundRect ? ctx.roundRect(x, y, barW, barH, [r, r, 0, 0]) : ctx.rect(x, y, barW, barH);
+      ctx.fill();
+    }
+  }
+  draw();
+
+  /* ---------- Now playing ---------- */
+  async function fetchNowPlaying() {
+    try {
+      const r = await fetch('/api/nowplaying', { cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+      if (!d.track && !d.artist) return;
+      npTrack.textContent = d.track || 'Tuntematon kappale';
+      npArtist.textContent = d.artist || '';
+      if (d.image) { npCover.src = d.image; npCover.hidden = false; }
+      const q = encodeURIComponent((d.artist ? d.artist + ' ' : '') + (d.track || ''));
+      document.getElementById('lnkSpotify').href = 'https://open.spotify.com/search/' + q;
+      document.getElementById('lnkYoutube').href = 'https://www.youtube.com/results?search_query=' + q;
+      document.getElementById('lnkApple').href = d.appleMusic || ('https://music.apple.com/fi/search?term=' + q);
+      npActions.hidden = false;
+    } catch (e) {
+      npTrack.textContent = 'Kappaletietoa ei saatavilla';
+      npArtist.textContent = '';
+    }
+  }
+  fetchNowPlaying();
+  setInterval(fetchNowPlaying, 15000);
 </script>
 </body>
 </html>
