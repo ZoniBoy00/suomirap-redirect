@@ -91,6 +91,12 @@ assert.ok(
   "CSP must allow the ICY proxy fetch",
 );
 assert.ok(
+  contentSecurityPolicy?.includes(
+    "img-src 'self' data: https://media.bauerradio.com https://assets.planetradio.co.uk",
+  ),
+  "CSP must allow the station's Planet Radio artwork host",
+);
+assert.ok(
   contentSecurityPolicy?.includes("worker-src 'self' blob:"),
   "CSP must allow the library's blob-backed codec worker",
 );

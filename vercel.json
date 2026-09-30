@@ -16,7 +16,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://media.bauerradio.com; media-src 'self' data: blob: https://5.61.90.42:8443 https://*.sharp-stream.com https://*.radioplay.fi; connect-src 'self' https://5.61.90.42:8443 https://listenapi.planetradio.co.uk https://www.radioplay.fi https://media.bauerradio.com"
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://media.bauerradio.com https://assets.planetradio.co.uk; media-src 'self' data: blob: https://5.61.90.42:8443 https://*.sharp-stream.com https://*.radioplay.fi; connect-src 'self' https://5.61.90.42:8443 https://listenapi.planetradio.co.uk https://www.radioplay.fi https://media.bauerradio.com"
         }
       ]
     }
