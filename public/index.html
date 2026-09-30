@@ -67,7 +67,7 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
     padding: 12px 14px;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
     min-height: 74px;
   }
   .np-cover {
@@ -81,13 +81,12 @@
   .np-label { font-size: 10px; letter-spacing: 2px; color: #ff6b81; font-weight: 700; margin-bottom: 3px; }
   .np-track { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .np-artist { font-size: 13px; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .np-loading { color: rgba(255,255,255,0.4); font-size: 13px; }
 
   /* Search links */
-  .np-actions { display: flex; gap: 8px; margin: -10px 0 20px; }
+  .np-actions { display: flex; gap: 8px; margin-bottom: 20px; }
   .np-actions a {
     flex: 1;
-    text-align: center;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
     text-decoration: none;
     font-size: 12px;
     font-weight: 600;
@@ -99,6 +98,7 @@
     transition: background 0.2s, color 0.2s;
   }
   .np-actions a:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .np-actions svg { width: 15px; height: 15px; flex-shrink: 0; }
 
   /* Visualizer */
   canvas#viz {
@@ -114,13 +114,15 @@
     margin: 0 auto 26px;
     border: none; border-radius: 50%;
     background: linear-gradient(135deg, #7b2ff7, #f72585);
-    color: #fff; font-size: 30px;
+    color: #fff;
     cursor: pointer;
     box-shadow: 0 10px 35px rgba(247, 37, 133, 0.5);
     transition: transform 0.15s ease, box-shadow 0.3s ease;
   }
   .play-btn:hover { transform: scale(1.06); box-shadow: 0 14px 45px rgba(247, 37, 133, 0.65); }
   .play-btn:active { transform: scale(0.96); }
+  .play-btn svg { width: 30px; height: 30px; fill: currentColor; }
+  .play-btn .icon-play { margin-left: 4px; }
 
   .volume-row {
     display: flex; align-items: center; gap: 12px;
@@ -129,13 +131,15 @@
   .mute-btn {
     background: none; border: none;
     color: rgba(255, 255, 255, 0.6);
-    font-size: 20px; cursor: pointer;
+    cursor: pointer;
     width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
     transition: color 0.2s;
   }
   .mute-btn:hover { color: #fff; }
+  .mute-btn svg { width: 21px; height: 21px; fill: currentColor; }
+
   .volume-slider {
     -webkit-appearance: none;
     appearance: none;
@@ -184,10 +188,10 @@
   <div class="card" id="card">
     <div class="header">
       <div class="live-badge"><span class="live-dot"></span>LIVE</div>
-      <div class="bitrate">128 kbps · MP3</div>
+      <div class="bitrate">64 kbps · AAC</div>
     </div>
 
-    <div class="np" id="np">
+    <div class="np">
       <img class="np-cover" id="npCover" alt="" hidden>
       <div class="np-info">
         <div class="np-label">NYT SOI</div>
@@ -197,17 +201,33 @@
     </div>
 
     <div class="np-actions" id="npActions" hidden>
-      <a id="lnkSpotify" target="_blank" rel="noopener">🎵 Spotify</a>
-      <a id="lnkYoutube" target="_blank" rel="noopener">▶ YouTube</a>
-      <a id="lnkApple" target="_blank" rel="noopener">🍎 Apple</a>
+      <a id="lnkSpotify" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+        Spotify
+      </a>
+      <a id="lnkYoutube" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        YouTube
+      </a>
+      <a id="lnkApple" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.03 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.702"/></svg>
+        Apple
+      </a>
     </div>
 
     <canvas id="viz"></canvas>
 
-    <button class="play-btn" id="playBtn" aria-label="Toista">▶</button>
+    <button class="play-btn" id="playBtn" aria-label="Toista">
+      <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="icon-pause" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
 
     <div class="volume-row">
-      <button class="mute-btn" id="muteBtn" aria-label="Hiljennä">🔊</button>
+      <button class="mute-btn" id="muteBtn" aria-label="Hiljennä">
+        <svg class="icon-vol-high" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        <svg class="icon-vol-low" viewBox="0 0 24 24" style="display:none"><path d="M5 9v6h4l5 5V4L9 9H5zm11.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+        <svg class="icon-vol-mute" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+      </button>
       <input type="range" class="volume-slider" id="volume" min="0" max="100" value="80">
       <span class="vol-value" id="volValue">80%</span>
     </div>
@@ -222,9 +242,14 @@
 <script>
   const player = document.getElementById('player');
   const playBtn = document.getElementById('playBtn');
+  const iconPlay = playBtn.querySelector('.icon-play');
+  const iconPause = playBtn.querySelector('.icon-pause');
   const volume = document.getElementById('volume');
   const volValue = document.getElementById('volValue');
   const muteBtn = document.getElementById('muteBtn');
+  const iconVolHigh = muteBtn.querySelector('.icon-vol-high');
+  const iconVolLow = muteBtn.querySelector('.icon-vol-low');
+  const iconVolMute = muteBtn.querySelector('.icon-vol-mute');
   const npTrack = document.getElementById('npTrack');
   const npArtist = document.getElementById('npArtist');
   const npCover = document.getElementById('npCover');
@@ -242,8 +267,9 @@
     volValue.textContent = pct + '%';
     volume.value = pct;
     volume.style.setProperty('--vol', pct + '%');
-    muteBtn.textContent = player.muted || player.volume === 0 ? '🔇'
-      : player.volume < 0.5 ? '🔉' : '🔊';
+    iconVolHigh.style.display = (!player.muted && player.volume >= 0.5) ? '' : 'none';
+    iconVolLow.style.display = (!player.muted && player.volume > 0 && player.volume < 0.5) ? '' : 'none';
+    iconVolMute.style.display = (player.muted || player.volume === 0) ? '' : 'none';
   }
 
   volume.addEventListener('input', () => {
@@ -263,7 +289,6 @@
   let playing = false;
   playBtn.addEventListener('click', () => {
     if (player.paused) {
-      // Always fetch with fresh redirect
       player.src = '/api/suomirap?t=' + Date.now();
       player.play().catch(() => {});
     } else {
@@ -276,7 +301,8 @@
 
   function setPlaying(on) {
     playing = on;
-    playBtn.textContent = on ? '⏸' : '▶';
+    iconPlay.style.display = on ? 'none' : '';
+    iconPause.style.display = on ? '' : 'none';
   }
 
   player.addEventListener('error', () => setPlaying(false));
@@ -297,7 +323,7 @@
       analyser.connect(audioCtx.destination);
       dataArray = new Uint8Array(analyser.frequencyBinCount);
     } catch (e) {
-      analyser = null; // fall back to decorative animation
+      analyser = null;
     }
   }
 
@@ -323,7 +349,6 @@
       analyser.getByteFrequencyData(dataArray);
       const usable = Math.floor(dataArray.length * 0.75);
       for (let i = 0; i < BAR_COUNT; i++) {
-        // Logarithmic-ish bin mapping so bass doesn't dominate everything
         const start = Math.floor(Math.pow(i / BAR_COUNT, 1.6) * usable);
         const end = Math.max(start + 1, Math.floor(Math.pow((i + 1) / BAR_COUNT, 1.6) * usable));
         let sum = 0;
@@ -333,7 +358,6 @@
       for (const v of bars) energy += v;
       energy /= BAR_COUNT;
     } else if (playing) {
-      // Decorative fallback if analyser unavailable
       fallbackPhase += 0.05;
       for (let i = 0; i < BAR_COUNT; i++) {
         bars[i] = 0.25 + 0.2 * Math.abs(Math.sin(fallbackPhase + i * 0.4));
@@ -341,11 +365,12 @@
       energy = 0.3;
     }
 
-    const gap = 3 * (window.devicePixelRatio || 1);
+    const dpr = window.devicePixelRatio || 1;
+    const gap = 3 * dpr;
     const barW = (w - gap * (BAR_COUNT - 1)) / BAR_COUNT;
     for (let i = 0; i < BAR_COUNT; i++) {
       const v = Math.min(1, bars[i] * 1.3);
-      const barH = Math.max(3 * (window.devicePixelRatio || 1), v * h);
+      const barH = Math.max(3 * dpr, v * h);
       const x = i * (barW + gap);
       const y = h - barH;
       const grad = ctx.createLinearGradient(0, y, 0, h);
@@ -353,8 +378,7 @@
       grad.addColorStop(1, 'rgba(123, 47, 247, 0.35)');
       ctx.fillStyle = grad;
       ctx.beginPath();
-      // Rounded top bars
-      const r = Math.min(barW / 2, 3 * (window.devicePixelRatio || 1));
+      const r = Math.min(barW / 2, 3 * dpr);
       ctx.roundRect ? ctx.roundRect(x, y, barW, barH, [r, r, 0, 0]) : ctx.rect(x, y, barW, barH);
       ctx.fill();
     }
