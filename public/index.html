@@ -177,16 +177,6 @@
         </button>
       </div>
 
-      <section
-        class="history"
-        id="historySection"
-        hidden
-        aria-labelledby="historyHeading"
-      >
-        <h2 id="historyHeading">Viimeksi soitettu</h2>
-        <ol class="history-list" id="historyList"></ol>
-      </section>
-
       <div class="utility-row">
         <label for="sleepTimer">Uniajastin</label>
         <select id="sleepTimer" aria-label="Uniajastin">
@@ -257,6 +247,47 @@
         <span class="vol-value" id="volValue">80%</span>
       </div>
 
+      <section
+        class="history"
+        id="historySection"
+        hidden
+        aria-labelledby="historyHeading"
+      >
+        <h2 id="historyHeading">Viimeksi soitettu</h2>
+        <ol class="history-list" id="historyList"></ol>
+        <nav
+          class="history-pagination"
+          id="historyPagination"
+          aria-label="Viimeksi soitettujen kappaleiden sivutus"
+          hidden
+        >
+          <button
+            class="history-page-button"
+            id="historyPrevious"
+            type="button"
+            aria-label="Edellinen historiakappalesivu"
+            aria-controls="historyList"
+          >
+            Edellinen
+          </button>
+          <span
+            class="history-page-status"
+            id="historyPageStatus"
+            role="status"
+            aria-live="polite"
+          ></span>
+          <button
+            class="history-page-button"
+            id="historyNext"
+            type="button"
+            aria-label="Seuraava historiakappalesivu"
+            aria-controls="historyList"
+          >
+            Seuraava
+          </button>
+        </nav>
+      </section>
+
       <footer class="footer">
         <a
           href="https://github.com/ZoniBoy00/suomirap-redirect"
@@ -279,6 +310,7 @@
     >
     <audio id="player" preload="none" crossorigin="anonymous"></audio>
 
+    <script src="/player-utils.js" defer></script>
     <script src="/player.js" defer></script>
   </body>
 </html>

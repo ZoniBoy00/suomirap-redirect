@@ -24,9 +24,25 @@ assert.doesNotMatch(
   /<audio[^>]+\ssrc=["']["']/i,
   "audio element must not use an empty src",
 );
-assert.match(html, /<script src="\/player\.js" defer><\/script>/);
 assert.match(html, /<link rel="stylesheet" href="\/styles\.css"\s*\/?\s*>/);
+assert.match(
+  html,
+  /<script src="\/player-utils\.js" defer><\/script>\s*<script src="\/player\.js" defer><\/script>/,
+);
+assert.match(html, /id="historyPagination"/);
+assert.match(html, /id="historyPrevious"/);
+assert.match(html, /id="historyNext"/);
+assert.ok(
+  html.indexOf('id="historySection"') > html.indexOf('id="volume"'),
+  "history must appear after playback controls",
+);
+assert.ok(
+  html.indexOf('id="historySection"') < html.indexOf("<footer"),
+  "history must remain above the legal footer",
+);
 
+const playerUtils = await read("public/player-utils.js");
+new Script(playerUtils, { filename: "public/player-utils.js" });
 const playerJs = await read("public/player.js");
 new Script(playerJs, { filename: "public/player.js" });
 
@@ -47,6 +63,7 @@ for (const name of [
 for (const path of [
   "public/styles.css",
   "public/player.js",
+  "public/player-utils.js",
   "public/favicon.svg",
   "public/cover-fallback.svg",
   "public/og-image.png",

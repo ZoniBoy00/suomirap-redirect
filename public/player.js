@@ -25,6 +25,10 @@
   const streamBadge = $("streamBadge");
   const historySection = $("historySection");
   const historyList = $("historyList");
+  const historyPagination = $("historyPagination");
+  const historyPrevious = $("historyPrevious");
+  const historyNext = $("historyNext");
+  const historyPageStatus = $("historyPageStatus");
   const shareTrackBtn = $("shareTrackBtn");
   const airplayBtn = $("airplayBtn");
 
@@ -47,6 +51,8 @@
   const FALLBACK_COVER = "/cover-fallback.svg";
   const reduceMotion =
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || false;
+  const { getTrackTiming, paginateHistory } = window.RadioPlayerUtils;
+  const HISTORY_PAGE_SIZE = 5;
 
   let bitrate = Number.parseInt(STORAGE.get("bitrate"), 10);
   if (bitrate !== 64 && bitrate !== 128) bitrate = 64;
@@ -83,6 +89,7 @@
   let currentTrack = null;
   let currentTrackKey = "";
   let trackStartedAt = "";
+  let historyPage = 0;
   const canvas = $("viz");
   const ctx = canvas.getContext("2d");
   const BAR_COUNT = 40;
@@ -400,20 +407,23 @@
   }
 
   function updateTrackAge() {
-    if (!trackStartedAt) {
+    const timing = getTrackTiming(trackStartedAt, currentTrack?.trackDuration);
+    if (timing.state === "unknown") {
       npFresh.textContent = "";
       return;
     }
-    const started = new Date(trackStartedAt).getTime();
-    if (!Number.isFinite(started)) {
-      npFresh.textContent = "";
+    const minutes = Math.floor(timing.elapsedSeconds / 60);
+    const seconds = String(timing.elapsedSeconds % 60).padStart(2, "0");
+    if (timing.state === "awaiting-next") {
+      npFresh.textContent = `Keston mukaan valmis (${minutes}:${seconds}) · odotetaan seuraavaa kappaletta`;
       return;
     }
-    const elapsed = Math.max(0, Math.floor((Date.now() - started) / 1000));
-    const minutes = Math.floor(elapsed / 60);
-    const seconds = String(elapsed % 60).padStart(2, "0");
     npFresh.textContent = `Soitossa ${minutes}:${seconds}`;
   }
+
+  setInterval(() => {
+    if (!document.hidden) updateTrackAge();
+  }, 1000);
 
   function renderHistory() {
     let items = [];
@@ -431,9 +441,21 @@
     } catch {
       items = [];
     }
+
+    const page = paginateHistory(items, historyPage, HISTORY_PAGE_SIZE);
+    historyPage = page.page;
     historyList.replaceChildren();
     historySection.hidden = items.length === 0;
-    for (const item of items) {
+    historyPagination.hidden = page.pageCount <= 1;
+    historyPrevious.disabled = page.page === 0;
+    historyNext.disabled = page.page >= page.pageCount - 1;
+    historyPageStatus.textContent = `Sivu ${page.page + 1} / ${page.pageCount}`;
+    historyList.setAttribute(
+      "aria-label",
+      `Viimeksi soitettujen kappaleiden sivu ${page.page + 1}`,
+    );
+
+    for (const item of page.items) {
       const li = document.createElement("li");
       li.className = "history-item";
       const text = document.createElement("span");
@@ -452,6 +474,15 @@
     }
   }
 
+  historyPrevious.addEventListener("click", () => {
+    historyPage--;
+    renderHistory();
+  });
+  historyNext.addEventListener("click", () => {
+    historyPage++;
+    renderHistory();
+  });
+
   function saveHistory(track, artist) {
     let items = [];
     try {
@@ -465,6 +496,7 @@
     );
     items.unshift({ track, artist });
     STORAGE.set("trackHistory", JSON.stringify(items.slice(0, 8)));
+    historyPage = 0;
     renderHistory();
   }
 
@@ -551,6 +583,10 @@
       artist,
       image: data.image || "",
       appleMusic: data.appleMusic || "",
+      trackDuration:
+        Number.isFinite(data.trackDuration) && data.trackDuration > 0
+          ? data.trackDuration
+          : null,
     };
     if (changed) {
       currentTrackKey = key;

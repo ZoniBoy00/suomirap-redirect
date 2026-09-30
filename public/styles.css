@@ -379,6 +379,49 @@ body {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.history-page-button {
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    opacity 0.2s;
+}
+.history-page-button:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.history-page-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.history-page-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.history-page-status {
+  min-width: 58px;
+  color: var(--muted);
+  font:
+    11px ui-monospace,
+    monospace;
+  text-align: center;
+}
 .utility-row {
   display: flex;
   flex-wrap: wrap;

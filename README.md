@@ -10,7 +10,9 @@ An unofficial Vercel-hosted stream redirect and web player for Suomirap. It is n
 
 - 64 kbps AAC and 128 kbps MP3 stream choices.
 - Responsive dark player with playback state, volume, audio visualizer, album artwork, and a fallback cover.
-- Track and artist metadata, current and next scheduled show, service search links, track history, copy/share actions, and a sleep timer.
+- Track and artist metadata, current and next scheduled show, service search links, copy/share actions, and a sleep timer.
+- Track time stops at the reported duration; if the next track metadata has not arrived, the player shows that it is waiting instead of counting through a possible talk/ad break.
+- Track history is at the bottom of the player, with at most five entries per page.
 - Keyboard shortcuts: Space toggles playback, `M` toggles mute, and Up/Down adjusts volume when focus is not in a form control.
 - Media Session metadata and media-button play/pause support where the browser provides the API.
 - Remembered quality and volume settings. Storage failures are handled without preventing playback.
@@ -41,7 +43,7 @@ npm run check
 npm test
 ```
 
-`npm run check` validates the static HTML shell, player JavaScript, configured security headers and required assets, runs API syntax checks, and checks Prettier formatting. `npm test` runs the built-in Node test runner against saved API fixtures and endpoint behavior.
+`npm run check` validates the static HTML shell, player JavaScript and timing utility, configured security headers and required assets, runs syntax checks, and checks Prettier formatting. `npm test` runs the built-in Node test runner against API fixtures, endpoint behavior, track timing, and history pagination.
 
 GitHub Actions runs the checks on pushes to `master` and pull requests. A scheduled monitor checks the deployed `/api/health` and `/api/nowplaying` endpoints every 15 minutes, opens one issue when a check fails, and closes it after recovery. It uses GitHub's own issue/API logs; no third-party telemetry service is installed.
 
