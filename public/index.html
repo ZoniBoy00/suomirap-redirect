@@ -69,6 +69,7 @@
   .np-label { font-size: 10px; letter-spacing: 2px; color: #ff6b81; font-weight: 700; margin-bottom: 3px; }
   .np-track { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .np-artist { font-size: 13px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-fresh { font-size: 10px; color: rgba(255,255,255,.35); margin-top: 3px; }
 
   /* Search links */
   .np-actions { display: flex; gap: 8px; margin-bottom: 20px; }
@@ -163,6 +164,7 @@
         <div class="np-label">NYT SOI</div>
         <div class="np-track" id="npTrack">Haetaan...</div>
         <div class="np-artist" id="npArtist"></div>
+        <div class="np-fresh" id="npFresh"></div>
       </div>
     </div>
 
@@ -223,6 +225,7 @@
   const iconVolMute = muteBtn.querySelector('.icon-vol-mute');
   const npTrack = $('npTrack');
   const npArtist = $('npArtist');
+  const npFresh = $('npFresh');
   const npCover = $('npCover');
   const npActions = $('npActions');
   const canvas = $('viz');
@@ -379,6 +382,8 @@
       if (!d.track && !d.artist) return;
       npTrack.textContent = d.track || 'Tuntematon kappale';
       npArtist.textContent = d.artist || '';
+      const t = new Date();
+      npFresh.textContent = 'päivitetty ' + t.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       if (d.image) { npCover.src = d.image; npCover.hidden = false; }
       const q = encodeURIComponent((d.artist ? d.artist + ' ' : '') + (d.track || ''));
       $('lnkSpotify').href = 'https://open.spotify.com/search/' + q;
