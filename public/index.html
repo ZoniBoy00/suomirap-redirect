@@ -391,7 +391,9 @@
     }
   }
   fetchNowPlaying();
-  setInterval(fetchNowPlaying, 10000);
+  // Poll every 30 s; upstream (Bauer) metadata itself updates with a
+  // delay of a few minutes, so this is as fast as it gets.
+  setInterval(fetchNowPlaying, 30000);
 })();
 </script>
 </body>

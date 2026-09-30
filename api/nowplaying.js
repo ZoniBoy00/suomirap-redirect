@@ -12,7 +12,7 @@ function pick(html, key) {
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=15, stale-while-revalidate=30");
+  res.setHeader("Cache-Control", "s-maxage=20, stale-while-revalidate=30");
   try {
     const r = await fetch(PAGE_URL, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; suomirap-player/1.0)" },
