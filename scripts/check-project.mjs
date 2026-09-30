@@ -24,6 +24,11 @@ assert.doesNotMatch(
   /<audio[^>]+\ssrc=["']["']/i,
   "audio element must not use an empty src",
 );
+assert.match(
+  html,
+  /<audio id="player" preload="auto" crossorigin="anonymous"><\/audio>/,
+  "the ICY MediaSource must be allowed to open without autoplay",
+);
 assert.match(html, /<link rel="stylesheet" href="\/styles\.css"\s*\/?\s*>/);
 assert.match(
   html,
