@@ -1,62 +1,56 @@
 # Suomirap Radio Redirect
 
-Vercel serverless functions that provide a permanently working URL and a web
-player for the Suomirap (radioplay.fi) live radio stream.
+A Vercel-hosted redirect service and web player for the live Suomirap radio stream.
 
-## Why
+## Features
 
-All Bauer stream mounts (`live-bauerfi.sharp-stream.com`,
-`streaming.radioplay.fi`) validate that the `aw_0_1st.skey` query parameter
-is a recent unix timestamp. Without a fresh `skey` and the `userConsentV2`
-consent string the server serves a "this channel's distribution has ended"
-announcement loop instead of music.
+- Stable stream URL that generates a fresh Bauer `skey` on every request.
+- 64 kbps AAC (default) and 128 kbps MP3 stream quality options.
+- Web player with now-playing track and artwork, on-air show information, music-service search links, volume control, and an audio visualizer.
+- A spinning vinyl record using the current track artwork; the record spins while playback is active.
+- Autoplay attempt with a muted fallback, play/pause controls, and automatic stream reconnects.
 
-The player page on radioplay.fi generates a fresh `skey` in the browser on
-every page load — which means a manually copied stream URL stops working.
-This project replicates that behavior server-side.
+## Stream URLs
 
-## How it works
+Use either URL in a compatible audio player or directory:
 
-1. A player (browser, VLC, ffplay, radio apps, car stereos...) requests
-   `/api/suomirap`
-2. The function generates a fresh `skey` (current unix timestamp) and builds
-   the full stream URL with the static consent string
-3. The function responds with `307 Temporary Redirect` to the stream URL
-4. The player follows the redirect and plays the stream
-
-The consent string is a static IAB TCF consent encoding and does not expire.
-
-The now-playing metadata (`/api/nowplaying`) is read from the station page,
-where Bauer server-side renders the current track info. It is therefore as
-fresh as Bauer's own data (updates within a few minutes of a track change).
-
-## Usage
-
-Stream URL for any audio player or stream directory:
-
-```
+```text
 https://suomirap-redirect.vercel.app/api/suomirap
+https://suomirap-redirect.vercel.app/api/suomirap?q=64
+https://suomirap-redirect.vercel.app/api/suomirap?q=128
 ```
 
-Web player with audio-reactive visualizer and now-playing info:
+`q=64` selects 64 kbps AAC. `q=128` selects 128 kbps MP3. If `q` is omitted or unsupported, the endpoint defaults to 64 kbps AAC.
 
-```
+The web player is available at:
+
+```text
 https://suomirap-redirect.vercel.app
 ```
 
+Browsers may block audible autoplay. If playback does not start automatically, use the play button.
+
+## How it works
+
+The stream mounts validate the `aw_0_1st.skey` query parameter. The redirect endpoint generates a current Unix timestamp, adds the stream's consent parameters, and responds with a `307 Temporary Redirect` to the selected Bauer stream mount.
+
+The `/api/nowplaying` endpoint fetches track metadata from Bauer's public Listen API and the station page in parallel. It prefers the Listen API for track and artist details, falls back to the station page when needed, and reads the current on-air show from the station page's embedded schedule. The endpoint uses a short shared cache (`s-maxage=15`, `stale-while-revalidate=30`).
+
 ## Endpoints
 
-- `GET /` — web player page (`public/index.html`)
-- `GET /api/suomirap` — 307 redirect to the live stream with a fresh `skey`
-- `GET /api/nowplaying` — JSON with the current track, artist, cover image
-  and music service links
+- `GET /` — web player (`public/index.html`)
+- `GET /api/suomirap` — redirects to the 64 kbps AAC stream by default
+- `GET /api/suomirap?q=64` — redirects to the 64 kbps AAC stream
+- `GET /api/suomirap?q=128` — redirects to the 128 kbps MP3 stream
+- `GET /api/nowplaying` — returns JSON track metadata, artwork, Apple Music URL, source, and current show (when available)
 
 ## Deploy your own
 
+Install the Vercel CLI and deploy from the repository root:
+
 ```bash
-npm i -g vercel
+npm install --global vercel
 vercel
 ```
 
-Or connect this repo to a Vercel project — every push to `master` deploys
-automatically.
+Alternatively, import the repository into a Vercel project. If Git-based deployments are enabled and `master` is configured as the production branch, pushes to `master` deploy automatically. Deployment behavior depends on the Vercel project settings; it is not configured by `vercel.json` alone.
