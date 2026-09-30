@@ -41,7 +41,13 @@ async function fromListenApi() {
   if (!r.ok) throw new Error("listenapi " + r.status);
   const events = await r.json();
   if (!Array.isArray(events) || events.length === 0) throw new Error("empty events");
-  const e = events[events.length - 1]; // ascending order -> last is newest
+  // The API returns events in inconsistent order (ascending or descending
+  // depending on the query window), so sort by timestamp ourselves.
+  // Timestamps are "YYYY-MM-DD HH:MM:SS" -> lexicographic sort works.
+  const sorted = [...events].sort((a, b) =>
+    String(a.nowPlayingTime).localeCompare(String(b.nowPlayingTime))
+  );
+  const e = sorted[sorted.length - 1]; // newest
   if (!e.nowPlayingTrack && !e.nowPlayingArtist) throw new Error("no track in event");
   return {
     track: e.nowPlayingTrack || "",
