@@ -188,7 +188,7 @@
     // Reconnect with the new quality if currently playing
     if (!player.paused && !userPaused) {
       activateAudioGraphFromGesture();
-      connectStream();
+      connectStream().catch(() => {});
     }
   });
   updateBitrateUI();
@@ -238,7 +238,7 @@
       updateVolumeUI();
       const tapBanner = $('tapBanner');
       if (tapBanner) tapBanner.remove();
-      if (player.paused) connectStream();
+      if (player.paused) connectStream().catch(() => {});
     } else {
       userPaused = true;
       autoRetry = false;
@@ -254,7 +254,10 @@
   function connectStream() {
     userPaused = false;
     player.src = '/api/suomirap?q=' + bitrate + '&t=' + Date.now(); // fresh redirect + chosen quality
-    return player.play();
+    return player.play().catch(error => {
+      // Replacing the stream can abort an earlier, still-pending play() request.
+      if (error.name !== 'AbortError') throw error;
+    });
   }
 
   player.addEventListener('playing', () => setPlaying(true));
