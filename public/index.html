@@ -89,22 +89,79 @@
   .np-actions svg { width: 15px; height: 15px; flex-shrink: 0; }
 
   /* Visualizer */
-  #viz { width: 100%; height: 56px; display: block; margin-bottom: 22px; }
+  #viz { width: 100%; height: 56px; display: block; margin-bottom: 24px; }
 
-  .play-btn {
-    display: flex; align-items: center; justify-content: center;
-    width: 78px; height: 78px;
-    margin: 0 auto 26px;
-    border: none; border-radius: 50%;
-    background: linear-gradient(135deg, #7b2ff7, #f72585);
-    color: #fff; cursor: pointer;
-    box-shadow: 0 10px 35px rgba(247,37,133,.5);
-    transition: transform .15s ease, box-shadow .3s ease;
+  /* ---------- Play button ---------- */
+  .play-wrap {
+    position: relative;
+    width: 88px; height: 88px;
+    margin: 0 auto 28px;
   }
-  .play-btn:hover { transform: scale(1.06); box-shadow: 0 14px 45px rgba(247,37,133,.65); }
-  .play-btn:active { transform: scale(.96); }
-  .play-btn svg { width: 30px; height: 30px; fill: currentColor; }
-  .play-btn .icon-play { margin-left: 4px; }
+  .play-btn {
+    position: relative;
+    z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    width: 88px; height: 88px;
+    border: none; border-radius: 50%;
+    background: linear-gradient(135deg, #7b2ff7 0%, #f72585 100%);
+    color: #fff; cursor: pointer;
+    box-shadow:
+      0 10px 35px rgba(247,37,133,.45),
+      inset 0 2px 6px rgba(255,255,255,.25),
+      inset 0 -3px 8px rgba(0,0,0,.25);
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease;
+  }
+  .play-btn:hover { transform: scale(1.07); box-shadow: 0 14px 50px rgba(247,37,133,.6), inset 0 2px 6px rgba(255,255,255,.3), inset 0 -3px 8px rgba(0,0,0,.25); }
+  .play-btn:active { transform: scale(.94); }
+  .play-btn:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+  .play-btn svg {
+    width: 34px; height: 34px;
+    fill: currentColor;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s ease;
+  }
+  .play-btn .icon-play { margin-left: 5px; }
+
+  /* Icon morph: old icon scales down, new scales up */
+  .play-btn .icon-pause { display: none; }
+  .playing .play-btn .icon-play  { display: none; }
+  .playing .play-btn .icon-pause { display: block; animation: iconIn .25s cubic-bezier(.34,1.56,.64,1); }
+  .playing .play-btn             { animation: iconIn .25s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes iconIn {
+    0% { transform: scale(.4); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Spinning glow ring while playing */
+  .play-ring {
+    position: absolute; inset: -7px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #7b2ff7, #f72585, #4361ee, #7b2ff7);
+    opacity: 0;
+    z-index: 1;
+    transition: opacity .4s ease;
+    filter: blur(1px);
+  }
+  .playing .play-ring {
+    opacity: .8;
+    animation: spin 3.2s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Soft pulse behind the button while playing */
+  .play-pulse {
+    position: absolute; inset: -14px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(247,37,133,.35) 0%, transparent 70%);
+    opacity: 0;
+    z-index: 0;
+    transition: opacity .4s ease;
+  }
+  .playing .play-pulse { opacity: 1; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: .8; }
+    50% { transform: scale(1.12); opacity: .4; }
+  }
 
   .volume-row { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
   .mute-btn {
@@ -145,6 +202,10 @@
   }
   .footer a { color: rgba(255,255,255,.3); font-size: 11px; text-decoration: none; letter-spacing: .5px; }
   .footer a:hover { color: rgba(255,255,255,.6); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blob, .play-ring, .play-pulse, .live-dot { animation: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -185,10 +246,14 @@
 
     <canvas id="viz"></canvas>
 
-    <button class="play-btn" id="playBtn" aria-label="Toista">
-      <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-      <svg class="icon-pause" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-    </button>
+    <div class="play-wrap">
+      <div class="play-pulse"></div>
+      <div class="play-ring"></div>
+      <button class="play-btn" id="playBtn" aria-label="Toista">
+        <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+    </div>
 
     <div class="volume-row">
       <button class="mute-btn" id="muteBtn" aria-label="Hiljennä">
@@ -214,9 +279,8 @@
   // ---------------------------------------------------------------- DOM refs
   const $ = id => document.getElementById(id);
   const player = $('player');
+  const card = $('card');
   const playBtn = $('playBtn');
-  const iconPlay = playBtn.querySelector('.icon-play');
-  const iconPause = playBtn.querySelector('.icon-pause');
   const volumeSlider = $('volume');
   const volValue = $('volValue');
   const muteBtn = $('muteBtn');
@@ -264,8 +328,8 @@
   // ---------------------------------------------------------------- Playback
   function setPlaying(on) {
     playing = on;
-    iconPlay.style.display = on ? 'none' : '';
-    iconPause.style.display = on ? '' : 'none';
+    card.classList.toggle('playing', on); // drives ring, pulse and icon morph
+    if (on) startDrawLoop(); else stopDrawLoop();
   }
 
   playBtn.addEventListener('click', () => {
@@ -285,10 +349,8 @@
   player.addEventListener('playing', () => setPlaying(true));
   player.addEventListener('error', () => setPlaying(false));
 
-  // ---------------------------------------------------------------- Visualizer
+  // ---------------------------------------------------------------- Audio graph
   let audioCtx = null, analyser = null, freqData = null, mediaSrcFailed = false;
-  let fallbackPhase = 0;
-  const BAR_COUNT = 40;
 
   function initAudioGraph() {
     if (audioCtx || mediaSrcFailed) return;
@@ -305,6 +367,11 @@
       mediaSrcFailed = true; // fall back to decorative animation
     }
   }
+
+  // ---------------------------------------------------------------- Visualizer
+  let fallbackPhase = 0;
+  let rafId = null;
+  const BAR_COUNT = 40;
 
   function readSpectrum(bars) {
     analyser.getByteFrequencyData(freqData);
@@ -338,14 +405,12 @@
     canvas.height = canvas.clientHeight * dpr;
   }
   window.addEventListener('resize', resizeCanvas);
-  resizeCanvas();
 
   function draw() {
-    requestAnimationFrame(draw);
+    rafId = requestAnimationFrame(draw);
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
-    if (!playing) return;
 
     const bars = new Array(BAR_COUNT).fill(0);
     const real = (analyser && freqData) ? readSpectrum(bars) : false;
@@ -371,7 +436,22 @@
       ctx.fill();
     }
   }
-  draw();
+
+  // Only run the draw loop while playing — no idle CPU burn when paused.
+  function startDrawLoop() {
+    if (rafId === null) {
+      resizeCanvas();
+      rafId = requestAnimationFrame(draw);
+    }
+  }
+  function stopDrawLoop() {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+  window.addEventListener('resize', () => { if (rafId !== null) resizeCanvas(); });
 
   // ---------------------------------------------------------------- Now playing
   async function fetchNowPlaying() {
@@ -382,8 +462,6 @@
       if (!d.track && !d.artist) return;
       npTrack.textContent = d.track || 'Tuntematon kappale';
       npArtist.textContent = d.artist || '';
-      const t = new Date();
-      npFresh.textContent = 'päivitetty ' + t.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       if (d.image) { npCover.src = d.image; npCover.hidden = false; }
       const q = encodeURIComponent((d.artist ? d.artist + ' ' : '') + (d.track || ''));
       $('lnkSpotify').href = 'https://open.spotify.com/search/' + q;
@@ -396,8 +474,6 @@
     }
   }
   fetchNowPlaying();
-  // Poll every 30 s; upstream (Bauer) metadata itself updates with a
-  // delay of a few minutes, so this is as fast as it gets.
   setInterval(fetchNowPlaying, 30000);
 })();
 </script>
