@@ -338,7 +338,6 @@
             )
               succeed();
           },
-          onStream: succeed,
           onError: reportError,
           onStop: () => {
             if (loadId !== streamLoadId || userPaused) return;
